@@ -110,3 +110,15 @@ tr.hl td{background:#1f2433}
 .reco.bad{border-color:var(--red)}
 details summary{cursor:pointer;font-weight:700}
 @media (max-width:640px){.hero h1{font-size:1.9rem}.race{grid-template-columns:44px 1fr}.race .chips{grid-column:2}}
+
+/* transfer recommendation tiers */
+.reco.tier-strong{border-color:var(--green);background:linear-gradient(90deg,#2ecc7114,transparent 60%);padding:8px 10px;border-radius:0 8px 8px 0}
+.reco.tier-good{border-color:var(--amber);background:linear-gradient(90deg,#f5b40012,transparent 60%);padding:8px 10px;border-radius:0 8px 8px 0}
+.reco.tier-marginal{border-color:#5a6478;opacity:.8;padding:8px 10px;border-radius:0 8px 8px 0}
+.gain{font-weight:800;padding:2px 9px;border-radius:999px;font-size:.85rem}
+.gain.strong{background:#0f2f1c;color:#7bffb0;border:1px solid #1f5a35}
+.gain.good{background:#3a2c05;color:#ffd866;border:1px solid #6a5210}
+.gain.marginal{background:var(--card2);color:var(--muted);border:1px solid var(--line)}
+.rank{display:inline-block;min-width:26px;text-align:center;font-size:.75rem;font-weight:800;color:var(--muted);background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:1px 4px;margin-right:4px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot.strong{background:var(--green)} .dot.good{background:var(--amber)} .dot.marginal{background:#5a6478}

@@ -71,10 +71,16 @@
       const res = F.suggestTransfers(T, nr, { horizon:+$("horizon").value, free: st.unlimited ? 2 : st.remaining, maxMoves: st.unlimited ? 2 : st.remaining, allowHits: allow, limit: 8 });
       if (!st.unlimited && st.remaining===0 && !allow) $("recs").innerHTML = `<div class="reco warn">You've used all your free transfers for R${R}. Tick “allow -10 hits” to see whether any move is still worth a penalty.</div>`;
       else if (!res.suggestions.length) $("recs").innerHTML = `<div class="reco">No move within your allowance beats the current team on this model — hold and roll a transfer into next week.</div>`;
-      else $("recs").innerHTML = res.suggestions.map((s,i)=>`<div class="reco ${s.penalty?'warn':''}">
-        <div class="row spread"><b>${s.moves.map(nm).join(" · ")}</b><button class="small" data-apply="${i}">Apply</button></div>
-        <div class="small">+${s.gain.toFixed(1)} pts projected · ${s.moves.length} transfer${s.moves.length>1?"s":""}${s.penalty?` incl. <span class="neg">${s.penalty} hit</span>`:" (free)"} · new value ${F.money(s.cost)} · ${F.money(cap-s.cost)} left</div>
-        <div class="small muted">${s.moves.map(m=>{ const x = m.type==="driver"?F.driverById(m.in):F.teamById(m.in); return x?`<em>${F.esc(x.last||x.name)}:</em> ${F.esc((x.bio||x.blurb).split(". ")[0])}.`:""; }).join(" ")}</div></div>`).join("");
+      else {
+        const top = res.suggestions[0].gain;
+        const tier = g => g >= 15 || g >= top*0.8 ? "strong" : (g >= 7 || g >= top*0.45 ? "good" : "marginal");
+        const tierLabel = { strong:"Strong gain", good:"Decent gain", marginal:"Marginal" };
+        $("recs").innerHTML = `<div class="row small muted" style="gap:12px;margin-bottom:6px"><span><i class="dot strong"></i> Strong (≥15 pts or near the best)</span><span><i class="dot good"></i> Decent (7–15)</span><span><i class="dot marginal"></i> Marginal (&lt;7)</span></div>` +
+        res.suggestions.map((s,i)=>{ const t = tier(s.gain); return `<div class="reco tier-${t}">
+        <div class="row spread"><span><span class="rank">#${i+1}</span> <b>${s.moves.map(nm).join(" · ")}</b></span><span class="row" style="gap:8px"><span class="gain ${t}">+${s.gain.toFixed(1)} pts</span><button class="small" data-apply="${i}">Apply</button></span></div>
+        <div class="small">${tierLabel[t]} · ${s.moves.length} transfer${s.moves.length>1?"s":""}${s.penalty?` incl. <span class="neg">${s.penalty} hit</span>`:" (free)"} · new value ${F.money(s.cost)} · ${F.money(cap-s.cost)} left</div>
+        <div class="small muted">${s.moves.map(m=>{ const x = m.type==="driver"?F.driverById(m.in):F.teamById(m.in); return x?`<em>${F.esc(x.last||x.name)}:</em> ${F.esc((x.bio||x.blurb).split(". ")[0])}.`:""; }).join(" ")}</div></div>`; }).join("");
+      }
       document.querySelectorAll("[data-apply]").forEach(b=>b.onclick=()=>{ const s=res.suggestions[+b.dataset.apply]; if(!confirm(`Apply ${s.moves.map(nm).join(" and ")} for R${R}?`)) return; s.moves.forEach(m=>F.logTransfer(R,m)); F.toast("Transfer logged — update it on fantasy.formula1.com too"); render(); });
     }
 
