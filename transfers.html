@@ -35,6 +35,28 @@
   </div>
 
   <div class="card" style="margin-top:16px">
+    <details>
+      <summary>How the recommendations are worked out — method &amp; sources</summary>
+      <div class="small" style="margin-top:10px;color:#cfd6e4">
+        <p><b>The engine.</b> Every possible legal move from your current team is tried — single driver swaps, single constructor swaps, and (when you have two free transfers) driver+driver and driver+constructor pairs. Each resulting team must fit your cost cap. A move is scored as <em>projected points of the new team − projected points of your current team − any -10 transfer hits</em> over the horizon you choose. Only moves that gain more than half a point are shown, best first.</p>
+        <p><b>Projections.</b> A driver's base projection is their average fantasy score per race weekend this season (<code>avgFp</code> in <code>data/data.js</code>, taken from the official F1 Fantasy Strategist previews and updated by hand; you can override it). It is then adjusted for the specific race: ×1.25 on Sprint weekends (an extra scoring session); +2 for cheap drivers and −1 for premium drivers on street circuits (chaos rewards overtakers and punishes the favourites); ×0.97 at new circuits (uncertainty); +1 at a driver's home race; and a one-off +8 for Antonelli at Monza (grid penalty = overtake points). Constructors use their season average, ×1.2 on Sprint weekends. The 2x Boost is modelled as +65% of your best driver's projection, since the boost applies to the Grand Prix only.</p>
+        <p><b>Strategy principles baked in</b> (drawn from the sources below): buy in-form premiums and fund them with price-floor enablers who finish races; consistency beats ceiling because a DNF is −20; Sprint weekends are worth more to premium drivers; street circuits favour cheap drivers who gain places; never take a −10 hit for less than ~10 points of expected gain; and roll a transfer when nothing clears the bar, because 3 free next week is worth more than 1 marginal move now.</p>
+        <p><b>Sources.</b></p>
+        <ul style="margin:4px 0 0 18px;padding:0">
+          <li><a href="https://f1pitwall.dev/blog/f1-fantasy-scoring-2026" target="_blank" rel="noopener">F1 Pitwall — F1 Fantasy scoring rules 2026</a> (points tables, DNF penalty, transfer and price rules)</li>
+          <li><a href="https://gridside.app/blog/guides/f1-fantasy-chip-strategy-2026-when-to-use-each-chip" target="_blank" rel="noopener">Gridside — chip strategy 2026</a> and <a href="https://intothechicane.com/2026/03/19/f1-fantasy-chips-2026-when-to-use-every-boost-and-why/" target="_blank" rel="noopener">Into the Chicane — when to use every chip</a> (chip timing logic)</li>
+          <li><a href="https://www.motorsportmagazine.com/articles/single-seaters/f1/f1-fantasy-chips-what-they-are-and-when-to-use-them/" target="_blank" rel="noopener">Motor Sport Magazine — F1 Fantasy chips explained</a></li>
+          <li><a href="https://www.formula1.com/en/latest/article/f1-fantasy-strategist-preview-what-you-need-to-know-for-the-italian-and-spanish-grands-prix.1BrDMFVfHdjo1Ty4oriX8D" target="_blank" rel="noopener">F1.com — Strategist preview, Italian &amp; Spanish GPs</a> and <a href="https://www.formula1.com/en/latest/article/f1-fantasy-strategist-preview-what-you-need-to-know-for-the-dutch-grand-prix.2bBlmguc36rYcXurzQcz2O" target="_blank" rel="noopener">Dutch GP</a> (current prices, points-per-$M, form notes, ownership)</li>
+          <li><a href="https://intothechicane.com/2026/08/20/f1-fantasy-dutch-gp-primer-best-lineups-value-picks-and-strategy/" target="_blank" rel="noopener">Into the Chicane — Dutch GP primer</a> and <a href="https://www.fanamp.com/articles/best-and-worst-f1-fantasy-picks-for-the-dutch-grand-prix-2026" target="_blank" rel="noopener">FanAmp — best &amp; worst picks</a> (value-pick reasoning)</li>
+          <li><a href="https://api.jolpi.ca/ergast/f1/2026/driverStandings.json" target="_blank" rel="noopener">Jolpica (Ergast) API</a> — live 2026 standings, results and calendar</li>
+          <li><a href="https://en.wikipedia.org/wiki/2026_Formula_One_World_Championship" target="_blank" rel="noopener">Wikipedia — 2026 season</a> — entry list, calendar changes</li>
+        </ul>
+        <p class="muted">Limitations: the model doesn't see practice pace, weather, grid penalties (beyond the Monza note) or price-change trends, and prices marked <span class="tag">est.</span> are estimates. Check the official game before the lock-in.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="card" style="margin-top:16px">
     <h2>Transfer log by week</h2>
     <div class="tablewrap"><table id="log"></table></div>
   </div>
