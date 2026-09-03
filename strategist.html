@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Strategist — F1 Fantasy HQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;1,700;1,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <h1 style="margin-top:22px">Strategist</h1>
+  <p class="muted">Transfer ideas are ranked by projected fantasy points gained over your chosen horizon, net of any -10 transfer hits, and must fit your budget. Projections come from each driver's average fantasy score this season, adjusted for Sprint weekends, street circuits, new tracks and home races. Treat them as a starting point, not gospel — check practice pace and grid penalties before the deadline.</p>
+
+  <div class="card" id="context"></div>
+
+  <div class="grid c2" style="margin-top:16px">
+    <div class="card">
+      <div class="row spread"><h2 style="margin:0">Recommended transfers</h2>
+        <label>Horizon <select id="horizon"><option value="1">Next race only</option><option value="3">Next 3 races</option><option value="6">Next 6 races</option><option value="99">Rest of season</option></select></label></div>
+      <div id="transfers" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <h2>2x Boost pick</h2>
+      <div id="boost"></div>
+      <h2 style="margin-top:18px">Chip this weekend?</h2>
+      <div id="chipNow"></div>
+    </div>
+  </div>
+
+  <div class="grid c2" style="margin-top:16px">
+    <div class="card">
+      <h2>Model's ideal team for the next race</h2>
+      <p class="small muted">Brute-force best 5+2 under your budget for the next round. Useful as a Wildcard / Limitless template (Limitless ignores the cap — see below).</p>
+      <div id="ideal"></div>
+      <div id="idealUnlimited" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h2>Value board</h2>
+      <p class="small muted">Projected points per $1M for the next race. Green = better value than the average pick.</p>
+      <div class="tablewrap"><table id="value"></table></div>
+    </div>
+  </div>
+</div>
+
+<script src="data/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const F = window.F1, S = F.S, D = F.D;
+  F.nav("strategist.html");
+  const T = S.team, nr = F.nextRace();
+  const $ = id => document.getElementById(id);
+  const dn = id => { const d=F.driverById(id); return d ? d.first+" "+d.last : id; };
+  const cn = id => { const c=F.teamById(id); return c ? c.name : id; };
+  const nm = m => m.type==="driver" ? dn(m.out)+" → "+dn(m.in) : cn(m.out)+" → "+cn(m.in);
+
+  if (!T.drivers.length) {
+    $("context").innerHTML = `<b>No team saved.</b> <a href="team.html">Enter your team first</a> — the strategist compares transfers against what you currently hold.`;
+  } else {
+    const cost = F.teamCost(T), proj = F.teamProjection(Object.assign({},T,{boost:T.boost||F.bestBoost(T,nr)}), nr);
+    $("context").innerHTML = `<div class="row spread"><div><b>${F.esc(T.name||"My team")}</b>: ${T.drivers.map(dn).join(", ")} + ${T.constructors.map(cn).join(", ")}</div>
+      <div class="muted small">Value ${F.money(cost)} / ${F.money(S.budget)} · ${S.freeTransfers} free transfer${S.freeTransfers===1?"":"s"} · projected <b>${Math.round(proj)}</b> pts at ${nr.flag} ${F.esc(nr.short)}</div></div>`;
+    if (T.drivers.length<5 || T.constructors.length<2) $("context").innerHTML += `<div class="reco warn">Your team is incomplete (${T.drivers.length}/5 drivers, ${T.constructors.length}/2 constructors) — fill it in on the My Team page for accurate advice.</div>`;
+  }
+
+  function renderTransfers(){
+    if (!T.drivers.length) { $("transfers").innerHTML = `<p class="muted">Save a team first.</p>`; return; }
+    const h = +$("horizon").value;
+    const res = F.suggestTransfers(T, nr, { horizon: h, limit: 8 });
+    if (!res.suggestions.length) { $("transfers").innerHTML = `<div class="reco">No transfer beats your current team on this model — hold, and bank the free transfer for next week.</div>`; return; }
+    $("transfers").innerHTML = res.suggestions.map((s,i)=>`<div class="reco ${i===0?'':''}">
+      <b>${s.moves.map(nm).join(" · ")}</b>
+      <div class="small">+${s.gain.toFixed(1)} pts projected${s.penalty?` (after ${s.penalty} transfer penalty)`:""} · new value ${F.money(s.cost)} · ${S.budget-s.cost>=0?F.money(S.budget-s.cost)+" left":""}</div>
+      <div class="small muted">${s.moves.map(m=>{ if(m.type!=="driver") return ""; const d=F.driverById(m.in); return d?`<em>${F.esc(d.last)}:</em> ${F.esc(d.bio.split(". ")[0])}.`:""; }).join(" ")}</div>
+    </div>`).join("");
+  }
+  $("horizon").onchange = renderTransfers; renderTransfers();
+
+  // boost
+  if (T.drivers.length) {
+    const ranked = T.drivers.map(F.driverById).filter(Boolean).map(d=>({d, p:F.projDriver(d,nr)})).sort((a,b)=>b.p-a.p);
+    $("boost").innerHTML = ranked.map((r,i)=>`<div class="row spread small"><span>${i===0?'<span class="boost">2x</span> ':''}${F.esc(r.d.first+" "+r.d.last)}</span><span class="muted">${r.p.toFixed(1)} proj · ×2 on GP ≈ +${(r.p*0.65).toFixed(0)}</span></div>`).join("") +
+      (T.boost && ranked[0].d.id!==T.boost ? `<div class="reco warn small">You currently boost ${dn(T.boost)}; the model prefers ${ranked[0].d.first} ${ranked[0].d.last} this weekend.</div>` : `<div class="reco small">Boost choice looks right.</div>`);
+  } else $("boost").innerHTML = `<p class="muted">Save a team first.</p>`;
+
+  // chip now
+  const cp = F.chipPlan();
+  const now = Object.entries(cp.plan).filter(([id,p])=>p.round===nr.round);
+  $("chipNow").innerHTML = now.length ? now.map(([id,p])=>`<div class="reco"><b>Play ${F.chipName(id)}</b> at ${nr.flag} ${F.esc(nr.short)}.<div class="small muted">${p.why.map(F.esc).join("; ")}</div></div>`).join("")
+    : `<div class="reco small">No chip recommended this weekend — save them. <a href="calendar.html">See the full plan →</a></div>`;
+
+  // ideal team
+  const best = F.bestTeam(Math.max(S.budget, T.drivers.length?F.teamCost(T):0), nr);
+  const show = (b, label) => !b ? "" : `<div class="small muted">${label}</div><div class="row" style="gap:6px;margin:6px 0">${b.drivers.map(id=>{const d=F.driverById(id),t=F.teamById(d.team);return `<span class="pill" style="border-color:${t.color}">${d.code}</span>`;}).join("")}${b.constructors.map(id=>{const c=F.teamById(id);return `<span class="pill" style="background:${c.color}22;border-color:${c.color}">${F.esc(c.name)}</span>`;}).join("")}</div>
+    <div class="small">Cost ${F.money(b.cost)} · projected ${Math.round(b.proj)} pts · ${b.drivers.map(dn).join(", ")}</div>`;
+  $("ideal").innerHTML = show(best, `Best under ${F.money(S.budget)}`);
+  if (!S.chipsUsed.limitless) $("idealUnlimited").innerHTML = show(F.bestTeam(999, nr), "Limitless line-up (no cap, one weekend only)");
+
+  // value board
+  const rows = F.drivers().filter(d=>!d.reserve).map(d=>({n:d.first+" "+d.last, team:F.teamById(d.team), price:d.price, p:F.projDriver(d,nr), est:d.est}))
+    .concat(F.teams().map(c=>({n:c.name+" (constructor)", team:c, price:c.price, p:F.projTeam(c,nr), est:c.est})));
+  const avg = rows.reduce((a,r)=>a+r.p/r.price,0)/rows.length;
+  rows.sort((a,b)=>b.p/b.price - a.p/a.price);
+  $("value").innerHTML = `<tr><th>Pick</th><th class="num">Price</th><th class="num">Proj</th><th class="num">Pts/$M</th></tr>` + rows.map(r=>`<tr><td><span class="swatch" style="--tc:${r.team.color}"></span> ${F.esc(r.n)}${T.drivers.concat(T.constructors).some(id=>{const x=F.driverById(id)||F.teamById(id);return x&&(x.first?x.first+" "+x.last===r.n:x.name+" (constructor)"===r.n);})?' <span class="tag">yours</span>':''}</td><td class="num">${F.money(r.price)}${r.est?' <span class="tag">est.</span>':''}</td><td class="num">${r.p.toFixed(1)}</td><td class="num ${r.p/r.price>avg?'pos':'neg'}">${(r.p/r.price).toFixed(2)}</td></tr>`).join("");
+  F.footer();
+})();
+</script>
+</body>
+</html>

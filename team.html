@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Team — F1 Fantasy HQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;1,700;1,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <h1 style="margin-top:22px">My team</h1>
+  <p class="muted">Enter the team you have on fantasy.formula1.com. Click a slot to remove, click a driver/constructor in the list to add. Everything saves automatically in this browser.</p>
+
+  <div class="grid c2">
+    <div>
+      <div class="card">
+        <div class="row spread">
+          <input id="teamName" placeholder="Team name" style="flex:1;min-width:160px">
+          <label title="Your team value plus cash in the bank — this can exceed $100M as prices rise">Total budget (value + bank) <input type="number" id="budget" step="0.1"></label>
+          <label>Free transfers <input type="number" id="freeT" step="1" min="0" max="3" style="width:60px"></label>
+        </div>
+        <div style="margin:12px 0 6px" class="row spread"><b>Cost <span id="cost"></span></b><span class="muted small" id="left"></span></div>
+        <div class="budgetbar"><i id="bar" style="width:0"></i></div>
+        <h3 style="margin-top:14px">Drivers <span class="muted small">(5) — click ★ to set your 2x Boost</span></h3>
+        <div class="grid" id="dslots" style="gap:8px"></div>
+        <h3 style="margin-top:14px">Constructors <span class="muted small">(2)</span></h3>
+        <div class="grid" id="cslots" style="gap:8px"></div>
+        <div class="row" style="margin-top:14px">
+          <button id="clearBtn" class="ghost small">Clear team</button>
+          <button id="exportBtn" class="ghost small">Export backup (JSON)</button>
+          <label class="btn ghost small" style="cursor:pointer">Import backup <input type="file" id="importFile" accept="application/json" hidden></label>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2>Chips used</h2>
+        <p class="small muted">Tick the chips you've already played (and which round) so the planner only schedules the ones you still hold.</p>
+        <div class="chipgrid" id="chips"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2>Points log</h2>
+        <p class="small muted">Record your score after each round to track progress.</p>
+        <div class="row"><label>Round <input type="number" id="hRound" style="width:60px"></label><label>Points <input type="number" id="hPts"></label><label>Rank <input type="number" id="hRank"></label><button id="hAdd" class="small">Add</button></div>
+        <div class="tablewrap" style="margin-top:8px"><table id="hTable"></table></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="row spread"><h2 style="margin:0">Pick drivers</h2><input id="search" placeholder="Search…" style="width:140px"></div>
+        <div class="small muted" style="margin:6px 0">Price · avg fantasy pts/weekend · value. Prices with <span class="tag">est.</span> are estimates — click the price to correct it.</div>
+        <div class="picklist" id="dlist"></div>
+        <h2 style="margin-top:16px">Pick constructors</h2>
+        <div class="picklist" id="clist"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="data/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const F = window.F1, S = F.S, D = F.D;
+  F.nav("team.html");
+  const T = S.team;
+  const $ = id => document.getElementById(id);
+  $("teamName").value = T.name || ""; $("budget").value = S.budget; $("freeT").value = S.freeTransfers;
+  $("teamName").oninput = e => { T.name = e.target.value; F.save(); };
+  $("budget").onchange = e => { S.budget = +e.target.value || D.rules.budget; F.save(); render(); };
+  $("freeT").onchange = e => { S.freeTransfers = +e.target.value; F.save(); };
+
+  function editPrice(id, cur){
+    const v = prompt("Current price on fantasy.formula1.com (in $M):", cur);
+    if (v == null || isNaN(+v)) return;
+    S.priceOverrides[id] = +v; F.save(); render();
+  }
+  window.editPrice = editPrice;
+
+  function render(){
+    const cost = F.teamCost(T), left = S.budget - cost;
+    $("cost").textContent = F.money(cost);
+    $("left").textContent = (left >= 0 ? F.money(left) + " remaining" : "OVER BUDGET by " + F.money(-left));
+    $("left").className = "small " + (left >= 0 ? "pos" : "neg");
+    $("bar").style.width = Math.min(100, cost / S.budget * 100) + "%";
+
+    const dsl = []; for (let i=0;i<5;i++){ const id=T.drivers[i]; const d=id&&F.driverById(id);
+      if (d){ const tm=F.teamById(d.team); dsl.push(`<div class="slot filled" style="--tc:${tm.color}">${F.initialsEl(d)}<div><b>${F.esc(d.first+" "+d.last)}</b> <span class="muted small">${F.esc(tm.name)} · ${F.money(d.price)}</span></div>
+        <button class="ghost small" title="Set 2x boost" data-boost="${d.id}" style="${T.boost===d.id?'background:var(--amber);color:#000':''}">★ 2x</button><button class="ghost small x" data-rm-d="${d.id}">✕</button></div>`); }
+      else dsl.push(`<div class="slot muted">Empty driver slot</div>`); }
+    $("dslots").innerHTML = dsl.join("");
+    const csl = []; for (let i=0;i<2;i++){ const id=T.constructors[i]; const c=id&&F.teamById(id);
+      if (c) csl.push(`<div class="slot filled" style="--tc:${c.color}"><span class="swatch" style="--tc:${c.color};width:24px;height:24px"></span><div><b>${F.esc(c.name)}</b> <span class="muted small">${F.esc(c.car)} · ${F.money(c.price)}</span></div><button class="ghost small x" data-rm-c="${c.id}">✕</button></div>`);
+      else csl.push(`<div class="slot muted">Empty constructor slot</div>`); }
+    $("cslots").innerHTML = csl.join("");
+    document.querySelectorAll("[data-rm-d]").forEach(b=>b.onclick=()=>{T.drivers=T.drivers.filter(x=>x!==b.dataset.rmD); if(T.boost===b.dataset.rmD)T.boost=null; F.save(); render();});
+    document.querySelectorAll("[data-rm-c]").forEach(b=>b.onclick=()=>{T.constructors=T.constructors.filter(x=>x!==b.dataset.rmC); F.save(); render();});
+    document.querySelectorAll("[data-boost]").forEach(b=>b.onclick=()=>{T.boost=b.dataset.boost; F.save(); render();});
+
+    const q = ($("search").value||"").toLowerCase();
+    $("dlist").innerHTML = F.drivers().filter(d=>!q || (d.first+" "+d.last+" "+d.code).toLowerCase().includes(q)).map(d=>{
+      const tm=F.teamById(d.team); const inTeam=T.drivers.includes(d.id); const full=T.drivers.length>=5; const over = !inTeam && cost + d.price > S.budget;
+      return `<div class="p ${inTeam||full||d.reserve?'disabled':''}" data-add-d="${d.id}">
+        <span class="swatch" style="--tc:${tm.color}"></span><b style="width:150px">${F.esc(d.first+" "+d.last)}</b><span class="muted small" style="width:90px">${F.esc(tm.name)}</span>
+        <span class="num" style="width:70px;cursor:pointer" onclick="event.stopPropagation();editPrice('${d.id}',${d.price})" title="Edit price">${F.money(d.price)}${d.est?' <span class="tag">est.</span>':''}</span>
+        <span class="num muted small" style="width:60px">${d.avgFp} pts</span><span class="num small ${over?'neg':'pos'}" style="width:60px">${(d.avgFp/d.price).toFixed(2)}/$M</span>${d.reserve?'<span class="tag">reserve</span>':''}</div>`;
+    }).join("");
+    $("clist").innerHTML = F.teams().map(c=>{
+      const inTeam=T.constructors.includes(c.id); const full=T.constructors.length>=2;
+      return `<div class="p ${inTeam||full?'disabled':''}" data-add-c="${c.id}"><span class="swatch" style="--tc:${c.color}"></span><b style="width:150px">${F.esc(c.name)}</b><span class="muted small" style="width:90px">${F.esc(c.car)}</span>
+        <span class="num" style="width:70px;cursor:pointer" onclick="event.stopPropagation();editPrice('${c.id}',${c.price})" title="Edit price">${F.money(c.price)}${c.est?' <span class="tag">est.</span>':''}</span><span class="num muted small" style="width:60px">${c.avgFp} pts</span><span class="num small pos" style="width:60px">${(c.avgFp/c.price).toFixed(2)}/$M</span></div>`;
+    }).join("");
+    document.querySelectorAll("[data-add-d]").forEach(b=>b.onclick=()=>{ if(b.classList.contains("disabled"))return; T.drivers.push(b.dataset.addD); if(!T.boost)T.boost=b.dataset.addD; F.save(); render(); });
+    document.querySelectorAll("[data-add-c]").forEach(b=>b.onclick=()=>{ if(b.classList.contains("disabled"))return; T.constructors.push(b.dataset.addC); F.save(); render(); });
+
+    // chips
+    $("chips").innerHTML = D.chips.map(c=>`<div class="chip ${S.chipsUsed[c.id]?'used':''}"><div class="n">${c.name}</div><div class="small muted">${c.desc}</div>
+      <div class="row" style="margin-top:6px"><label><input type="checkbox" data-chip="${c.id}" ${S.chipsUsed[c.id]?'checked':''}> used</label><input type="number" data-chipround="${c.id}" placeholder="round" style="width:70px" value="${S.chipsUsed[c.id]||''}"></div></div>`).join("");
+    document.querySelectorAll("[data-chip]").forEach(cb=>cb.onchange=()=>{ const id=cb.dataset.chip; if(cb.checked){ S.chipsUsed[id]= +document.querySelector(`[data-chipround="${id}"]`).value || F.lastCompletedRound(); } else delete S.chipsUsed[id]; F.save(); render(); });
+    document.querySelectorAll("[data-chipround]").forEach(inp=>inp.onchange=()=>{ const id=inp.dataset.chipround; if(S.chipsUsed[id]){ S.chipsUsed[id]=+inp.value||S.chipsUsed[id]; F.save(); } });
+
+    // history
+    $("hTable").innerHTML = S.history.length ? `<tr><th>Round</th><th class="num">Points</th><th class="num">Rank</th><th></th></tr>` + S.history.map((h,i)=>`<tr><td>R${h.round}</td><td class="num">${h.points}</td><td class="num">${h.rank||"—"}</td><td><button class="ghost small" data-hdel="${i}">✕</button></td></tr>`).join("") +
+      `<tr><td><b>Total</b></td><td class="num"><b>${S.history.reduce((a,h)=>a+h.points,0)}</b></td><td></td><td></td></tr>` : `<tr><td class="muted">No rounds logged yet.</td></tr>`;
+    document.querySelectorAll("[data-hdel]").forEach(b=>b.onclick=()=>{S.history.splice(+b.dataset.hdel,1); F.save(); render();});
+  }
+  $("search").oninput = render;
+  $("hAdd").onclick = () => { const r=+$("hRound").value, p=+$("hPts").value; if(!r) return F.toast("Enter a round number"); S.history=S.history.filter(h=>h.round!==r); S.history.push({round:r,points:p,rank:+$("hRank").value||null}); S.history.sort((a,b)=>a.round-b.round); F.save(); render(); };
+  $("hRound").value = F.lastCompletedRound();
+  $("clearBtn").onclick = () => { if(confirm("Clear your saved team?")){ T.drivers=[]; T.constructors=[]; T.boost=null; F.save(); render(); } };
+  $("exportBtn").onclick = () => { const a=document.createElement("a"); a.href="data:application/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(S,null,2)); a.download="f1-fantasy-backup.json"; a.click(); };
+  $("importFile").onchange = e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const j=JSON.parse(r.result); Object.assign(S,j); F.save(); location.reload(); }catch(err){ F.toast("Not a valid backup file"); } }; r.readAsText(f); };
+  render();
+  F.footer();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Drivers — F1 Fantasy HQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;1,700;1,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="row spread" style="margin-top:22px"><h1 style="margin:0">Drivers 2026</h1>
+    <div class="row"><input id="q" placeholder="Search driver or team…"><select id="sort"><option value="pos">Championship order</option><option value="price">Price (high→low)</option><option value="value">Fantasy value</option><option value="avgFp">Avg fantasy pts</option><option value="team">By team</option></select></div></div>
+  <p class="muted">Bios summarise 2026 fantasy form; the photo and the short Wikipedia extract load live (and are cached in this browser for a week). Click a driver's name for their Wikipedia page.</p>
+  <div class="grid c2" id="list"></div>
+</div>
+
+<script src="data/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const F = window.F1, S = F.S;
+  F.nav("drivers.html");
+  const nr = F.nextRace();
+  const age = b => Math.floor((Date.now()-new Date(b))/31557600000);
+  function render(){
+    const q = document.getElementById("q").value.toLowerCase(), s = document.getElementById("sort").value;
+    let ds = F.drivers().filter(d=>{const t=F.teamById(d.team); return !q || (d.first+" "+d.last+" "+t.name+" "+d.code).toLowerCase().includes(q);});
+    if (s==="price") ds.sort((a,b)=>b.price-a.price); else if (s==="value") ds.sort((a,b)=>b.avgFp/b.price-a.avgFp/a.price); else if (s==="avgFp") ds.sort((a,b)=>b.avgFp-a.avgFp); else if (s==="team") ds.sort((a,b)=>(F.teamById(a.team).pos-F.teamById(b.team).pos)||a.pos-b.pos);
+    document.getElementById("list").innerHTML = ds.map(d=>{
+      const t = F.teamById(d.team); const mine = S.team.drivers.includes(d.id);
+      return `<div class="card teamcard" id="${d.id}" style="--tc:${t.color}">
+        <div class="drivercard">${F.driverImg(d,"big")}
+          <div class="info">
+            <div class="row spread"><div><a href="https://en.wikipedia.org/wiki/${encodeURIComponent(d.wiki)}" target="_blank" rel="noopener" style="font-size:1.3rem;font-weight:800">${d.nat} ${F.esc(d.first+" "+d.last)}</a> <span class="muted">#${d.num}</span> ${mine?'<span class="pill green">in my team</span>':''} ${d.reserve?'<span class="pill">reserve</span>':''}</div></div>
+            <div class="small muted">${F.esc(t.name)} · ${F.esc(d.country)} · age ${age(d.born)}</div>
+            <div class="row" style="gap:14px;margin-top:6px">
+              <span><b>P${d.pos}</b> <span class="muted small">champ.</span></span><span><b>${d.points}</b> <span class="muted small">pts</span></span><span><b>${d.wins}</b> <span class="muted small">wins</span></span>
+              <span><b>${F.money(d.price)}</b>${d.est?' <span class="tag">est.</span>':''}</span><span><b>${d.avgFp}</b> <span class="muted small">avg fantasy</span></span><span><b>${F.projDriver(d,nr).toFixed(0)}</b> <span class="muted small">proj ${F.esc(nr.short)}</span></span>
+            </div>
+            <p class="bio">${F.esc(d.bio)}</p>
+            <div class="wikibio" data-wiki="${F.esc(d.wiki)}" data-wiki-text></div>
+          </div></div></div>`;
+    }).join("");
+    F.hydrateWiki();
+  }
+  document.getElementById("q").oninput = render; document.getElementById("sort").onchange = render;
+  render();
+  if (location.hash) setTimeout(()=>{ const el=document.querySelector(location.hash); el && el.scrollIntoView({behavior:"smooth"}); }, 200);
+  F.footer();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>F1 Fantasy HQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;1,700;1,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23e10600'/><text x='50' y='68' font-size='52' text-anchor='middle' font-family='Arial' font-weight='900' fill='white'>F1</text></svg>">
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <h1>F1 Fantasy <span style="color:var(--red)">HQ</span></h1>
+    <p class="sub">Your 2026 team tracker and race strategist. Team, transfers and chip plan are stored in this browser — nothing to upload. Live standings pull from the Jolpica API when you hit refresh.</p>
+    <div class="row" style="margin-bottom:12px">
+      <a class="btn" href="team.html">Build / edit my team</a>
+      <a class="btn ghost" href="strategist.html">Get transfer advice</a>
+      <a class="btn ghost" href="calendar.html">Chip plan</a>
+    </div>
+    <div id="heroCar"></div>
+    <div class="tarmac"></div>
+  </section>
+  <div class="kerb"></div>
+
+  <div class="grid c3">
+    <div class="card" id="nextRace"></div>
+    <div class="card" id="myTeam"></div>
+    <div class="card" id="chipSummary"></div>
+  </div>
+
+  <div class="grid c2" style="margin-top:16px">
+    <div class="card">
+      <h2>Drivers' championship</h2>
+      <div class="tablewrap"><table id="dTable"></table></div>
+      <p class="small muted"><a href="drivers.html">All drivers, bios and photos →</a></p>
+    </div>
+    <div class="card">
+      <h2>Constructors' championship</h2>
+      <div class="tablewrap"><table id="cTable"></table></div>
+      <p class="small muted"><a href="teams.html">All teams, cars and colours →</a></p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Season so far</h2>
+    <div class="row" id="winners"></div>
+  </div>
+</div>
+
+<script src="data/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const F = window.F1, S = F.S, D = F.D;
+  F.nav("index.html");
+  document.getElementById("heroCar").innerHTML = F.carSVG("#e10600", "#ffffff", {num:""});
+
+  // next race
+  const nr = F.nextRace();
+  const dl = nr.deadline ? new Date(nr.deadline) : new Date(nr.date + "T12:00:00Z");
+  function cd(){
+    const ms = dl - new Date(); if (ms < 0) return "Deadline passed";
+    const d = Math.floor(ms/864e5), h = Math.floor(ms%864e5/36e5), m = Math.floor(ms%36e5/6e4);
+    return `${d}d ${h}h ${m}m to lock-in`;
+  }
+  const nrEl = document.getElementById("nextRace");
+  function renderNext(){
+    nrEl.innerHTML = `<h2>Next race</h2>
+      <div style="font-size:1.4rem;font-weight:800">${nr.flag} ${F.esc(nr.name)}</div>
+      <div class="muted">Round ${nr.round} · ${F.esc(nr.circuit)} · ${F.fmtDate(nr.date)} ${nr.sprint?'<span class="pill amber">Sprint</span>':''} ${nr.newCircuit?'<span class="pill blue">New circuit</span>':''}</div>
+      <div style="font-size:1.1rem;margin:8px 0;color:var(--red);font-weight:700">${cd()}</div>
+      <div class="small">${F.esc(nr.profile||"")}</div>`;
+  }
+  renderNext(); setInterval(renderNext, 30000);
+
+  // my team summary
+  const t = S.team, el = document.getElementById("myTeam");
+  if (!t.drivers.length) {
+    el.innerHTML = `<h2>My team</h2><p class="muted">No team saved yet.</p><a class="btn" href="team.html">Enter your team</a>`;
+  } else {
+    const proj = F.teamProjection(Object.assign({},t,{boost:t.boost||F.bestBoost(t,nr)}), nr);
+    el.innerHTML = `<h2>${F.esc(t.name||"My team")}</h2>
+      <div class="row" style="gap:6px">${t.drivers.map(id=>{const d=F.driverById(id); if(!d) return ""; const tm=F.teamById(d.team); return `<span class="pill" style="border-color:${tm.color}">${d.code}${t.boost===id?' <span class="boost">2x</span>':''}</span>`;}).join("")}
+      ${t.constructors.map(id=>{const c=F.teamById(id); return c?`<span class="pill" style="background:${c.color}22;border-color:${c.color}">${F.esc(c.name)}</span>`:"";}).join("")}</div>
+      <div class="small muted" style="margin-top:8px">Value ${F.money(F.teamCost(t))} of ${F.money(S.budget)} · projected ${Math.round(proj)} pts this weekend</div>
+      ${S.history.length?`<div class="small">Last recorded: ${S.history[S.history.length-1].points} pts (round ${S.history[S.history.length-1].round})</div>`:""}
+      <div class="row" style="margin-top:10px"><a class="btn small" href="strategist.html">Improve it</a><a class="btn ghost small" href="team.html">Edit</a></div>`;
+  }
+
+  // chips
+  const cp = F.chipPlan();
+  const cal = F.calendar();
+  document.getElementById("chipSummary").innerHTML = `<h2>Chip plan</h2>` +
+    D.chips.map(c => {
+      const used = S.chipsUsed[c.id];
+      if (used) return `<div class="row spread small" style="opacity:.55"><span>${c.name}</span><span class="muted">used R${used}</span></div>`;
+      const p = cp.plan[c.id]; const r = cal.find(x=>x.round===p.round);
+      return `<div class="row spread small"><span>${c.name}</span><span><b>R${p.round}</b> ${r.flag} ${F.esc(r.short)}${p.manual?' <span class="tag">you</span>':''}</span></div>`;
+    }).join("") + `<p class="small muted" style="margin-top:8px"><a href="calendar.html">Full reasoning & alternatives →</a></p>`;
+
+  // standings
+  const ds = F.drivers();
+  document.getElementById("dTable").innerHTML = `<tr><th>#</th><th>Driver</th><th>Team</th><th class="num">Pts</th><th class="num">Wins</th></tr>` +
+    ds.slice(0,12).map(d=>{const tm=F.teamById(d.team); return `<tr><td>${d.pos}</td><td><span class="swatch" style="--tc:${tm.color}"></span> ${F.esc(d.first+" "+d.last)}</td><td class="muted">${F.esc(tm.name)}</td><td class="num">${d.points}</td><td class="num">${d.wins}</td></tr>`;}).join("");
+  document.getElementById("cTable").innerHTML = `<tr><th>#</th><th>Team</th><th class="num">Pts</th><th class="num">Wins</th></tr>` +
+    F.teams().map(c=>`<tr><td>${c.pos}</td><td><span class="swatch" style="--tc:${c.color}"></span> ${F.esc(c.name)}</td><td class="num">${c.points}</td><td class="num">${c.wins}</td></tr>`).join("");
+
+  document.getElementById("winners").innerHTML = cal.filter(r=>r.winner).map(r=>{const d=F.driverById(r.winner); const tm=F.teamById(r.winTeam)||{}; return `<div class="chip" style="min-width:150px;border-left:4px solid ${tm.color}"><div class="small muted">R${r.round} ${r.flag} ${F.esc(r.short)}</div><div class="n">${d?F.esc(d.last):F.esc(r.winner)}</div><div class="small muted">${F.esc(tm.name||"")}</div></div>`;}).join("");
+  F.footer();
+})();
+</script>
+</body>
+</html>

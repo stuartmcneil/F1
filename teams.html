@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teams — F1 Fantasy HQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;1,700;1,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <h1 style="margin-top:22px">Teams 2026</h1>
+  <p class="muted">Eleven constructors this season — Audi's works debut, Cadillac's arrival, and Red Bull Ford power. Logos and car photos load from Wikipedia (cached in this browser); the coloured car sketch is an original illustration in each team's colours.</p>
+  <div class="grid c2" id="teams"></div>
+</div>
+
+<script src="data/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const F = window.F1;
+  F.nav("teams.html");
+  const ds = F.drivers();
+  document.getElementById("teams").innerHTML = F.teams().map(t=>{
+    const line = ds.filter(d=>d.team===t.id && !d.reserve);
+    return `<div class="card teamcard" style="--tc:${t.color}">
+      <div class="row spread">
+        <div><div class="row"><img class="logo hidden" data-wiki="${F.esc(t.wiki)}" data-px="300" alt="${F.esc(t.name)} logo" src="data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='120' height='46'><rect width='120' height='46' fill='${t.color}'/><text x='60' y='30' text-anchor='middle' font-family='Arial' font-weight='bold' font-size='16' fill='#fff'>${t.name}</text></svg>`)}">
+          <div><div style="font-size:1.25rem;font-weight:800">P${t.pos} · ${F.esc(t.name)}</div><div class="muted small">${F.esc(t.full)}</div></div></div></div>
+        <div class="num"><div style="font-size:1.4rem;font-weight:800">${t.points} <span class="small muted">pts</span></div><div class="small muted">${t.wins} win${t.wins===1?"":"s"} · ${F.money(t.price)}${t.est?' <span class="tag">est.</span>':''}</div></div>
+      </div>
+      <div style="margin:12px 0 6px">${F.carSVG(t.color, t.color2, {num: line[0]?line[0].num:""})}</div>
+      <img class="carimg" data-wiki="${F.esc(t.carWiki)}" data-px="800" alt="${F.esc(t.name)} ${F.esc(t.car)}" src="data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='400' height='150'><rect width='400' height='150' fill='#141826'/><text x='200' y='80' text-anchor='middle' font-family='Arial' font-size='16' fill='#98a2b8'>${t.car} photo loads from Wikipedia</text></svg>`)}">
+      <div class="row spread small" style="margin-top:8px"><span><b>Car:</b> ${F.esc(t.car)}</span><span><b>Power unit:</b> ${F.esc(t.engine)}</span><span><b>Base:</b> ${F.esc(t.base)}</span></div>
+      <p class="bio">${F.esc(t.blurb)}</p>
+      <div class="grid c2" style="gap:10px;margin-top:8px">${line.map(d=>`<a class="slot filled" style="--tc:${t.color}" href="drivers.html#${d.id}">${F.driverImg(d)}<div><b>#${d.num} ${F.esc(d.first+" "+d.last)}</b><div class="small muted">${d.nat} P${d.pos} · ${d.points} pts · ${F.money(d.price)}</div></div></a>`).join("")}</div>
+      <div class="wikibio" data-wiki="${F.esc(t.wiki)}" data-wiki-text></div>
+    </div>`;
+  }).join("");
+  F.hydrateWiki();
+  F.footer();
+})();
+</script>
+</body>
+</html>

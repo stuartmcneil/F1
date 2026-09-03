@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Calendar & Chips — F1 Fantasy HQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;1,700;1,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <h1 style="margin-top:22px">Calendar & chip plan</h1>
+  <p class="muted">2026 has 23 rounds after the Bahrain and Saudi Arabian rounds were cancelled (Sepang hosts a replacement in October). The planner assigns each unused chip to the remaining weekend where it is likely to pay off most — one chip per weekend. Override any pick and the rest re-plan around it.</p>
+
+  <div class="card">
+    <h2>Chip plan</h2>
+    <div class="chipgrid" id="plan"></div>
+    <p class="small muted" style="margin-top:10px">Rules of thumb: <b>3x Boost</b> on a Sprint weekend (three scoring sessions tripled); <b>Limitless</b> where the expensive cars are safest bets; <b>No Negative</b> at the crash-prone street races; <b>Wildcard</b> when the form-book shifts or before a run of flyaways; <b>Autopilot</b> where you can't call the winner; <b>Final Fix</b> to react to a wet or penalty-hit qualifying.</p>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Season calendar</h2>
+    <div class="timeline" id="tl"></div>
+    <div id="cancelled" class="small muted" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<script src="data/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const F = window.F1, S = F.S, D = F.D;
+  F.nav("calendar.html");
+  const cal = F.calendar(), nr = F.nextRace();
+  function render(){
+    const cp = F.chipPlan();
+    const byRound = {};
+    document.getElementById("plan").innerHTML = D.chips.map(c=>{
+      if (S.chipsUsed[c.id]) return `<div class="chip used"><div class="n">${c.name}</div><div class="small">Used in round ${S.chipsUsed[c.id]}</div></div>`;
+      const p = cp.plan[c.id]; const r = cal.find(x=>x.round===p.round); (byRound[p.round]=byRound[p.round]||[]).push(c.name);
+      const opts = F.remainingRaces().map(x=>`<option value="${x.round}" ${x.round===p.round?'selected':''}>R${x.round} ${x.short}</option>`).join("");
+      return `<div class="chip" style="border-color:${p.manual?'var(--amber)':'var(--line)'}"><div class="n">${c.name}</div>
+        <div style="font-size:1.05rem">${r.flag} <b>${F.esc(r.short)}</b> <span class="muted small">R${r.round} · ${F.fmtDate(r.date)}</span></div>
+        <div class="small muted">${p.why.map(F.esc).join("; ")}</div>
+        ${p.alternatives&&p.alternatives.length?`<div class="small muted">Alternatives: ${p.alternatives.map(a=>{const ar=cal.find(x=>x.round===a.round);return ar?ar.short:"";}).filter(Boolean).join(", ")}</div>`:""}
+        <div class="row" style="margin-top:6px"><select data-plan="${c.id}"><option value="">auto</option>${opts}</select>${p.manual?'<span class="tag">manual</span>':''}</div></div>`;
+    }).join("");
+    document.querySelectorAll("[data-plan]").forEach(s=>{ s.onchange=()=>{ if(s.value) S.chipPlan[s.dataset.plan]=+s.value; else delete S.chipPlan[s.dataset.plan]; F.save(); render(); }; if(!S.chipPlan[s.dataset.plan]) s.value=""; });
+
+    document.getElementById("tl").innerHTML = cal.map(r=>{
+      const done = !!r.winner, w = done && F.driverById(r.winner), wt = done && F.teamById(r.winTeam);
+      const chips = (byRound[r.round]||[]).map(n=>`<span class="pill green">${n}</span>`).join("") + Object.entries(S.chipsUsed).filter(([id,rd])=>rd===r.round).map(([id])=>`<span class="pill">${F.chipName(id)} ✓</span>`).join("");
+      return `<div class="race ${done?'done':''} ${r.round===nr.round?'next':''}">
+        <div class="rn">R${r.round}</div>
+        <div><b>${r.flag} ${F.esc(r.name)}</b> ${r.sprint?'<span class="pill amber">Sprint</span>':''} ${r.newCircuit?'<span class="pill blue">New</span>':''} <span class="tag">${r.type}</span>
+          <div class="small muted">${F.esc(r.circuit)}, ${F.esc(r.city)} · ${F.fmtDate(r.date)}${r.deadline?` · lock-in ${new Date(r.deadline).toLocaleString("en-GB",{weekday:"short",hour:"2-digit",minute:"2-digit"})} UK`:""}</div>
+          ${done?`<div class="small">Winner: <b style="color:${wt?wt.color:'#fff'}">${w?F.esc(w.first+" "+w.last):F.esc(r.winner)}</b> (${wt?F.esc(wt.name):""})</div>`:(r.profile?`<div class="small" style="color:#cfd6e4">${F.esc(r.profile)}</div>`:"")}
+        </div>
+        <div class="chips">${chips}</div></div>`;
+    }).join("");
+    document.getElementById("cancelled").innerHTML = D.cancelled.map(c=>`✕ ${F.esc(c.name)} (${F.fmtDate(c.origDate)}) — ${F.esc(c.note)}`).join("<br>");
+  }
+  render();
+  F.footer();
+})();
+</script>
+</body>
+</html>
