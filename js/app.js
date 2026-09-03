@@ -415,12 +415,13 @@
     const el = document.createElement("div"); el.className="nav";
     el.innerHTML = `<div class="in"><a class="brand" href="index.html"><span class="stripe"></span>F1 Fantasy HQ</a>
       ${links.map(l=>`<a class="link ${l[0]===active?'active':''}" href="${l[0]}">${l[1]}</a>`).join("")}
-      <button class="ghost small" id="refreshBtn" title="Pull latest standings & results from the Jolpica API">↻ Refresh live data</button></div>`;
+      <button class="ghost small" id="refreshBtn" title="Pull latest standings & results from the Jolpica API">↻ Refresh</button>
+      <a class="btn small" href="https://github.com/stuartmcneil/window" target="_blank" rel="noopener" title="github.com/stuartmcneil/window" style="margin-left:6px">Stuart McNeil</a></div>`;
     document.body.prepend(el);
     el.querySelector("#refreshBtn").onclick = async (e) => {
       e.target.disabled = true; e.target.textContent = "Refreshing…";
       try { const l = await refreshLive(); toast(`Live data updated — standings after round ${l.round}`); setTimeout(()=>location.reload(), 900); }
-      catch(err){ toast("Could not reach live data (offline or API blocked) — using bundled data"); e.target.disabled=false; e.target.textContent="↻ Refresh live data"; }
+      catch(err){ toast("Could not reach live data (offline or API blocked) — using bundled data"); e.target.disabled=false; e.target.textContent="↻ Refresh"; }
     };
   }
   function footer(){

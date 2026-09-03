@@ -18,16 +18,16 @@ h3{font-size:1.05rem}
 
 /* nav */
 .nav{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#0b0d12,#0b0d12ee);border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
-.nav .in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:6px;padding:10px 20px;flex-wrap:wrap}
+.nav .in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:3px;padding:10px 16px;flex-wrap:wrap}
 .brand{font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:8px;margin-right:auto}
 .brand .stripe{width:28px;height:14px;background:var(--red);transform:skew(-20deg);display:inline-block}
-.nav a.link{padding:6px 12px;border-radius:8px;color:var(--muted);font-weight:600}
+.nav a.link{padding:6px 7px;border-radius:8px;color:var(--muted);font-weight:600}
 .nav a.link:hover,.nav a.link.active{color:#fff;background:var(--card2)}
 .nav button{margin-left:6px}
 
 button,.btn{background:var(--red);color:#fff;border:0;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;font-family:inherit;font-size:.95rem}
 button.ghost,.btn.ghost{background:var(--card2);color:var(--text);border:1px solid var(--line)}
-button.small{padding:5px 10px;font-size:.85rem}
+button.small,.btn.small{padding:5px 10px;font-size:.85rem}
 button:disabled{opacity:.45;cursor:not-allowed}
 input,select,textarea{background:var(--bg2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-family:inherit;font-size:.95rem}
 input[type=number]{width:90px}
