@@ -17,7 +17,8 @@
       <div class="card">
         <div class="row spread">
           <input id="teamName" placeholder="Team name" style="flex:1;min-width:160px">
-          <label title="Your team value plus cash in the bank — this can exceed $100M as prices rise">Total budget (value + bank) <input type="number" id="budget" step="0.1"></label>
+          <label title="Your cost cap on fantasy.formula1.com = team value + cash in the bank. Starts at $100M and drifts as prices move. Set it before picking your team so the budget bar and picks are checked against the right number.">Cost cap <input type="number" id="budget" step="0.1" min="50"></label>
+          <button class="ghost small" id="capFromTeam" title="Set the cap to exactly what your current picks cost">Cap = team value</button>
           <label>Free transfers <input type="number" id="freeT" step="1" min="0" max="3" style="width:60px"></label>
         </div>
         <div style="margin:12px 0 6px" class="row spread"><b>Cost <span id="cost"></span></b><span class="muted small" id="left"></span></div>
@@ -83,7 +84,8 @@
   const $ = id => document.getElementById(id);
   $("teamName").value = T.name || ""; $("budget").value = S.budget; $("freeT").value = S.freeTransfers;
   $("teamName").oninput = e => { T.name = e.target.value; F.save(); };
-  $("budget").onchange = e => { S.budget = +e.target.value || D.rules.budget; F.save(); render(); };
+  $("budget").oninput = e => { const v=+e.target.value; if(!v||v<50) return; S.budget = v; if(S.baseline){S.baseline.budget=v;} F.save(); const b=$("bBudget"); if(b) b.value=v; render(); };
+  $("capFromTeam").onclick = () => { const v=Math.round(F.teamCost(T)*10)/10; if(!v) return F.toast("Pick some drivers first"); S.budget=v; if(S.baseline)S.baseline.budget=v; $("budget").value=v; const b=$("bBudget"); if(b) b.value=v; F.save(); render(); F.toast(`Cost cap set to ${F.money(v)}`); };
   $("freeT").onchange = e => { S.freeTransfers = +e.target.value; F.save(); };
 
   function editPrice(id, cur){
@@ -95,7 +97,7 @@
 
   function render(){
     const cost = F.teamCost(T), left = S.budget - cost;
-    $("cost").textContent = F.money(cost);
+    $("cost").textContent = F.money(cost) + " of " + F.money(S.budget) + " cap";
     $("left").textContent = (left >= 0 ? F.money(left) + " remaining" : "OVER BUDGET by " + F.money(-left));
     $("left").className = "small " + (left >= 0 ? "pos" : "neg");
     $("bar").style.width = Math.min(100, cost / S.budget * 100) + "%";
@@ -146,6 +148,7 @@
   const B = S.baseline;
   $("bRound").value = B ? B.round : F.lastCompletedRound();
   $("bPts").value = B ? B.points : ""; $("bRank").value = B && B.rank ? B.rank : ""; $("bBudget").value = B ? B.budget : S.budget; $("bFree").value = B && B.free != null ? B.free : S.freeTransfers;
+  $("bBudget").oninput = e => { const v=+e.target.value; if(!v||v<50) return; S.budget=v; $("budget").value=v; F.save(); render(); };
   function bStatus(){
     if (!S.baseline) { $("bStatus").innerHTML = `<span class="muted">No mid-season baseline set — tracking assumes you started at round 1.</span>`; return; }
     const r = cal.find(x=>x.round===S.baseline.round);
