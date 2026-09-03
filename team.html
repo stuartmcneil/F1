@@ -18,7 +18,8 @@
         <div class="row spread">
           <input id="teamName" placeholder="Team name" style="flex:1;min-width:160px">
           <label title="Your cost cap on fantasy.formula1.com = team value + cash in the bank. Starts at $100M and drifts as prices move. Set it before picking your team so the budget bar and picks are checked against the right number.">Cost cap <input type="number" id="budget" step="0.1" min="50"></label>
-          <button class="ghost small" id="capFromTeam" title="Set the cap to exactly what your current picks cost">Cap = team value</button>
+          <label title="Cash left over on fantasy.formula1.com after your team — type this and the cost cap is worked out as team value + bank">In the bank <input type="number" id="bank" step="0.1" style="width:80px"></label>
+          <button class="ghost small" id="capFromTeam" title="Set the cap to exactly what your current picks cost (bank = $0)">Cap = team value</button>
           <label>Free transfers <input type="number" id="freeT" step="1" min="0" max="3" style="width:60px"></label>
         </div>
         <div style="margin:12px 0 6px" class="row spread"><b>Cost <span id="cost"></span></b><span class="muted small" id="left"></span></div>
@@ -82,7 +83,11 @@
   F.nav("team.html");
   const T = S.team;
   const $ = id => document.getElementById(id);
+  // sanity: a cap below $50M can only be a mistake (e.g. the bank figure typed into the cap box)
+  if (!S.budget || S.budget < 50) { S.budget = Math.max(D.rules.budget, Math.round(F.teamCost(T)*10)/10); F.save(); }
   $("teamName").value = T.name || ""; $("budget").value = S.budget; $("freeT").value = S.freeTransfers;
+  const syncBank = () => { if (document.activeElement !== $("bank")) $("bank").value = (Math.round((S.budget - F.teamCost(T))*10)/10).toFixed(1); };
+  $("bank").oninput = e => { const v = +e.target.value; if (isNaN(v)) return; S.budget = Math.round((F.teamCost(T) + v)*10)/10; if(S.baseline) S.baseline.budget=S.budget; $("budget").value = S.budget; const b=$("bBudget"); if(b) b.value=S.budget; F.save(); render(); };
   $("teamName").oninput = e => { T.name = e.target.value; F.save(); };
   $("budget").oninput = e => { const v=+e.target.value; if(!v||v<50) return; S.budget = v; if(S.baseline){S.baseline.budget=v;} F.save(); const b=$("bBudget"); if(b) b.value=v; render(); };
   $("capFromTeam").onclick = () => { const v=Math.round(F.teamCost(T)*10)/10; if(!v) return F.toast("Pick some drivers first"); S.budget=v; if(S.baseline)S.baseline.budget=v; $("budget").value=v; const b=$("bBudget"); if(b) b.value=v; F.save(); render(); F.toast(`Cost cap set to ${F.money(v)}`); };
@@ -98,9 +103,10 @@
   function render(){
     const cost = F.teamCost(T), left = S.budget - cost;
     $("cost").textContent = F.money(cost) + " of " + F.money(S.budget) + " cap";
-    $("left").textContent = (left >= 0 ? F.money(left) + " remaining" : "OVER BUDGET by " + F.money(-left));
+    $("left").textContent = (left >= 0 ? F.money(left) + " in the bank" : "OVER CAP by " + F.money(-left) + " — if your cap is really higher, type it in Cost cap (or type your leftover cash in “In the bank”)");
     $("left").className = "small " + (left >= 0 ? "pos" : "neg");
     $("bar").style.width = Math.min(100, cost / S.budget * 100) + "%";
+    syncBank();
 
     const dsl = []; for (let i=0;i<5;i++){ const id=T.drivers[i]; const d=id&&F.driverById(id);
       if (d){ const tm=F.teamById(d.team); dsl.push(`<div class="slot filled" style="--tc:${tm.color}">${F.initialsEl(d)}<div><b>${F.esc(d.first+" "+d.last)}</b> <span class="muted small">${F.esc(tm.name)} · ${F.money(d.price)}</span></div>
