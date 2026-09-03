@@ -16,7 +16,7 @@
     <p class="sub">Your 2026 team tracker and race strategist. Team, transfers and chip plan are stored in this browser — nothing to upload. Live standings pull from the Jolpica API when you hit refresh.</p>
     <div class="row" style="margin-bottom:12px">
       <a class="btn" href="team.html">Build / edit my team</a>
-      <a class="btn ghost" href="strategist.html">Get transfer advice</a>
+      <a class="btn ghost" href="transfers.html">Weekly transfers</a>
       <a class="btn ghost" href="calendar.html">Chip plan</a>
     </div>
     <div id="heroCar"></div>
@@ -85,7 +85,8 @@
       <div class="row" style="gap:6px">${t.drivers.map(id=>{const d=F.driverById(id); if(!d) return ""; const tm=F.teamById(d.team); return `<span class="pill" style="border-color:${tm.color}">${d.code}${t.boost===id?' <span class="boost">2x</span>':''}</span>`;}).join("")}
       ${t.constructors.map(id=>{const c=F.teamById(id); return c?`<span class="pill" style="background:${c.color}22;border-color:${c.color}">${F.esc(c.name)}</span>`:"";}).join("")}</div>
       <div class="small muted" style="margin-top:8px">Value ${F.money(F.teamCost(t))} of ${F.money(S.budget)} · projected ${Math.round(proj)} pts this weekend</div>
-      ${S.history.length?`<div class="small">Last recorded: ${S.history[S.history.length-1].points} pts (round ${S.history[S.history.length-1].round})</div>`:""}
+      ${(S.baseline||S.history.length)?`<div class="small">Season total: <b>${F.totalPoints()}</b> pts${S.baseline&&S.baseline.rank?` · rank ${S.baseline.rank.toLocaleString()} at R${S.baseline.round}`:""}</div>`:""}
+      <div class="small">Free transfers for R${nr.round}: <b>${(()=>{const s=F.transferStatus(nr.round);return s.unlimited?"∞":s.remaining+"/"+s.avail;})()}</b> <a class="muted" href="transfers.html">plan →</a></div>
       <div class="row" style="margin-top:10px"><a class="btn small" href="strategist.html">Improve it</a><a class="btn ghost small" href="team.html">Edit</a></div>`;
   }
 

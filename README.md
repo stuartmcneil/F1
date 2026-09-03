@@ -9,7 +9,8 @@ Everything runs in the browser. Your team, chips used, price corrections, points
 | Page | What it does |
 |---|---|
 | `index.html` | Front page: next-race countdown, your team at a glance, chip plan summary, standings, season winners |
-| `team.html` | Team builder: pick 5 drivers + 2 constructors under budget, set 2x Boost, tick chips used, log points, edit prices, export/import a JSON backup |
+| `team.html` | Team builder + **Mid-season start** (enter current team, total points, rank, cost cap and free transfers, then Apply to continue from that round): pick 5 drivers + 2 constructors under budget, set 2x Boost, tick chips used, log points, edit prices, export/import a JSON backup |
+| `transfers.html` | Weekly transfer planner: free-transfer allowance per round (2 + rollover, max 3, -10 per extra, unlimited on Wildcard/Limitless), recommendations limited to what you can afford this week, Apply buttons that log the move and update your team, manual transfers, per-week log with undo |
 | `strategist.html` | Ranked transfer suggestions (single/double swaps, net of -10 hits), best 2x Boost, chip-this-weekend call, brute-force ideal team, value board |
 | `calendar.html` | Full 23-round calendar with results, track profiles, lock-in times, and the chip planner (auto or manual per chip) |
 | `teams.html` | All 11 teams with colours, car name, power unit, an original car illustration in team colours, Wikipedia logo/car photo and driver line-up |

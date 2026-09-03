@@ -18,7 +18,7 @@
     <div class="card">
       <div class="row spread"><h2 style="margin:0">Recommended transfers</h2>
         <label>Horizon <select id="horizon"><option value="1">Next race only</option><option value="3">Next 3 races</option><option value="6">Next 6 races</option><option value="99">Rest of season</option></select></label></div>
-      <div id="transfers" style="margin-top:10px"></div>
+      <div class="small muted">Unconstrained view (up to 2 moves, hits allowed). For moves limited to this week's free transfers, with Apply buttons, use the <a href="transfers.html">Transfers</a> tab.</div><div id="transfers" style="margin-top:10px"></div>
     </div>
     <div class="card">
       <h2>2x Boost pick</h2>
@@ -67,7 +67,7 @@
   function renderTransfers(){
     if (!T.drivers.length) { $("transfers").innerHTML = `<p class="muted">Save a team first.</p>`; return; }
     const h = +$("horizon").value;
-    const res = F.suggestTransfers(T, nr, { horizon: h, limit: 8 });
+    const res = F.suggestTransfers(T, nr, { horizon: h, limit: 8, allowHits: true });
     if (!res.suggestions.length) { $("transfers").innerHTML = `<div class="reco">No transfer beats your current team on this model — hold, and bank the free transfer for next week.</div>`; return; }
     $("transfers").innerHTML = res.suggestions.map((s,i)=>`<div class="reco ${i===0?'':''}">
       <b>${s.moves.map(nm).join(" · ")}</b>

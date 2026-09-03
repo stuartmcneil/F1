@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Transfers — F1 Fantasy HQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;1,700;1,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <h1 style="margin-top:22px">Transfers</h1>
+  <p class="muted">Weekly transfer planner. You get 2 free transfers per race weekend, plus 1 rolled over if you left one unused (max 3). Every transfer beyond that costs -10 points. Wildcard and Limitless weekends are unlimited. Recommendations below only use the free transfers you actually have this week unless you tick “allow hits”. Press <b>Apply</b> on a suggestion to log it and update your team.</p>
+
+  <div class="card" id="status"></div>
+
+  <div class="grid c2" style="margin-top:16px">
+    <div class="card">
+      <div class="row spread"><h2 style="margin:0">Recommended this week</h2>
+        <span class="row"><label><input type="checkbox" id="allowHits"> allow -10 hits</label>
+        <label>Horizon <select id="horizon"><option value="1">This race</option><option value="3">Next 3</option><option value="6">Next 6</option><option value="99">Rest of season</option></select></label></span></div>
+      <div id="recs" style="margin-top:10px"></div>
+    </div>
+    <div>
+      <div class="card">
+        <h2>Manual transfer</h2>
+        <div class="row"><label>Out <select id="mOut"></select></label><label>In <select id="mIn"></select></label><button id="mApply" class="small">Apply</button></div>
+        <div id="mInfo" class="small muted" style="margin-top:6px"></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h2>Current team</h2>
+        <div id="cur"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Transfer log by week</h2>
+    <div class="tablewrap"><table id="log"></table></div>
+  </div>
+</div>
+
+<script src="data/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const F = window.F1, S = F.S, D = F.D;
+  F.nav("transfers.html");
+  const T = S.team, nr = F.nextRace(), R = nr.round;
+  const $ = id => document.getElementById(id);
+  const dn = id => { const d=F.driverById(id); return d ? d.first+" "+d.last : id; };
+  const cn = id => { const c=F.teamById(id); return c ? c.name : id; };
+  const nm = m => m.type==="driver" ? dn(m.out)+" → "+dn(m.in) : cn(m.out)+" → "+cn(m.in);
+
+  function render(){
+    const st = F.transferStatus(R);
+    const cost = F.teamCost(T), cap = Math.max(S.budget, cost);
+    $("status").innerHTML = !T.drivers.length ? `<b>No team saved.</b> <a href="team.html">Enter your team first.</a>` :
+      `<div class="row spread">
+        <div><div class="small muted">Upcoming</div><div style="font-size:1.2rem;font-weight:800">${nr.flag} R${R} ${F.esc(nr.name)}</div><div class="small muted">${F.fmtDate(nr.date)}${nr.deadline?` · lock-in ${new Date(nr.deadline).toLocaleString("en-GB",{weekday:"short",hour:"2-digit",minute:"2-digit"})} UK`:""}</div></div>
+        <div class="num"><div class="small muted">Free transfers this week</div><div style="font-size:1.6rem;font-weight:800;color:${st.unlimited?'var(--green)':(st.remaining>0?'var(--green)':'var(--amber)')}">${st.unlimited?"∞":st.remaining+" / "+st.avail}</div><div class="small muted">${st.unlimited?"Wildcard/Limitless active":st.used+" used"}${st.extra?` · <span class="neg">${st.extra} extra = ${st.penalty} pts</span>`:""}</div></div>
+        <div class="num"><div class="small muted">Budget</div><div style="font-size:1.2rem;font-weight:800">${F.money(cost)} <span class="small muted">/ ${F.money(cap)}</span></div><div class="small ${cap-cost>=0?'pos':'neg'}">${F.money(cap-cost)} in the bank</div></div>
+        <div class="num"><div class="small muted">Season points</div><div style="font-size:1.2rem;font-weight:800">${F.totalPoints()}</div><div class="small muted">${S.baseline?`from R${S.baseline.round+1}`:"logged"}</div></div>
+      </div>
+      ${!st.unlimited && st.avail<3 && F.transfersUsed(R)===0 && st.avail===2 ? `<div class="small muted" style="margin-top:8px">Tip: leave one transfer unused this week and you'll have 3 free next week.</div>`:""}`;
+
+    // recommendations
+    if (!T.drivers.length) { $("recs").innerHTML = ""; }
+    else {
+      const allow = $("allowHits").checked;
+      const res = F.suggestTransfers(T, nr, { horizon:+$("horizon").value, free: st.unlimited ? 2 : st.remaining, maxMoves: st.unlimited ? 2 : st.remaining, allowHits: allow, limit: 8 });
+      if (!st.unlimited && st.remaining===0 && !allow) $("recs").innerHTML = `<div class="reco warn">You've used all your free transfers for R${R}. Tick “allow -10 hits” to see whether any move is still worth a penalty.</div>`;
+      else if (!res.suggestions.length) $("recs").innerHTML = `<div class="reco">No move within your allowance beats the current team on this model — hold and roll a transfer into next week.</div>`;
+      else $("recs").innerHTML = res.suggestions.map((s,i)=>`<div class="reco ${s.penalty?'warn':''}">
+        <div class="row spread"><b>${s.moves.map(nm).join(" · ")}</b><button class="small" data-apply="${i}">Apply</button></div>
+        <div class="small">+${s.gain.toFixed(1)} pts projected · ${s.moves.length} transfer${s.moves.length>1?"s":""}${s.penalty?` incl. <span class="neg">${s.penalty} hit</span>`:" (free)"} · new value ${F.money(s.cost)} · ${F.money(cap-s.cost)} left</div>
+        <div class="small muted">${s.moves.map(m=>{ const x = m.type==="driver"?F.driverById(m.in):F.teamById(m.in); return x?`<em>${F.esc(x.last||x.name)}:</em> ${F.esc((x.bio||x.blurb).split(". ")[0])}.`:""; }).join(" ")}</div></div>`).join("");
+      document.querySelectorAll("[data-apply]").forEach(b=>b.onclick=()=>{ const s=res.suggestions[+b.dataset.apply]; if(!confirm(`Apply ${s.moves.map(nm).join(" and ")} for R${R}?`)) return; s.moves.forEach(m=>F.logTransfer(R,m)); F.toast("Transfer logged — update it on fantasy.formula1.com too"); render(); });
+    }
+
+    // manual
+    const outs = T.drivers.map(id=>`<option value="d:${id}">${dn(id)}</option>`).join("") + T.constructors.map(id=>`<option value="c:${id}">${cn(id)} (constructor)</option>`).join("");
+    if ($("mOut").innerHTML !== outs) $("mOut").innerHTML = outs;
+    const fillIn = () => { const [k,id] = ($("mOut").value||":").split(":"); const outX = k==="d"?F.driverById(id):F.teamById(id); const bank = cap - cost + (outX?outX.price:0);
+      $("mIn").innerHTML = (k==="d" ? F.drivers().filter(d=>!T.drivers.includes(d.id)&&!d.reserve).map(d=>`<option value="${d.id}" ${d.price>bank?'disabled':''}>${d.first} ${d.last} ${F.money(d.price)}${d.price>bank?' (over cap)':''}</option>`) : F.teams().filter(c=>!T.constructors.includes(c.id)).map(c=>`<option value="${c.id}" ${c.price>bank?'disabled':''}>${c.name} ${F.money(c.price)}${c.price>bank?' (over cap)':''}</option>`)).join("");
+      $("mInfo").textContent = `Budget available for the incoming pick: ${F.money(bank)}. ${st.unlimited?"Unlimited transfers this week.":(st.remaining>0?`${st.remaining} free transfer${st.remaining===1?"":"s"} left.`:"No free transfers left — this would cost -10 pts.")}`; };
+    $("mOut").onchange = fillIn; fillIn();
+    $("mApply").onclick = () => { const [k,out] = $("mOut").value.split(":"); const inn = $("mIn").value; if(!inn) return; if (!st.unlimited && st.remaining<=0 && !confirm("This exceeds your free transfers and costs -10 points. Continue?")) return; F.logTransfer(R,{type:k==="d"?"driver":"constructor",out,in:inn}); F.toast("Transfer logged"); render(); };
+
+    // current team
+    $("cur").innerHTML = `<div class="row" style="gap:6px">${T.drivers.map(id=>{const d=F.driverById(id); if(!d) return ""; const tm=F.teamById(d.team); return `<span class="pill" style="border-color:${tm.color}">${d.code}${T.boost===id?' <span class="boost">2x</span>':''}</span>`;}).join("")}${T.constructors.map(id=>{const c=F.teamById(id); return c?`<span class="pill" style="background:${c.color}22;border-color:${c.color}">${F.esc(c.name)}</span>`:"";}).join("")}</div>
+      <div class="small muted" style="margin-top:6px">${T.drivers.map(dn).join(", ")} + ${T.constructors.map(cn).join(", ")} · <a href="team.html">edit</a></div>`;
+
+    // log
+    const rounds = [...new Set(S.transfers.map(t=>t.round))].sort((a,b)=>a-b);
+    const cal = F.calendar();
+    const rows = [];
+    const start = S.baseline ? S.baseline.round+1 : Math.min(R, ...rounds, R);
+    for (let r = start; r <= R; r++) {
+      const s = F.transferStatus(r), rc = cal.find(x=>x.round===r), list = S.transfers.map((t,i)=>({t,i})).filter(x=>x.t.round===r);
+      rows.push(`<tr class="${r===R?'hl':''}"><td>R${r} ${rc?rc.flag+" "+F.esc(rc.short):""}</td><td class="num">${s.unlimited?"∞":s.avail}</td><td class="num">${s.used}</td><td class="num ${s.penalty?'neg':''}">${s.penalty||0}</td>
+        <td>${list.length?list.map(x=>`<span class="pill" style="text-transform:none">${F.esc(nm(x.t))} <a href="#" data-undo="${x.i}" title="Undo" style="color:#ff8a80">✕</a></span>`).join(" "):'<span class="muted">—</span>'}</td></tr>`);
+    }
+    $("log").innerHTML = `<tr><th>Round</th><th class="num">Free</th><th class="num">Used</th><th class="num">Penalty</th><th>Transfers</th></tr>` + rows.join("");
+    document.querySelectorAll("[data-undo]").forEach(a=>a.onclick=e=>{ e.preventDefault(); if(confirm("Undo this transfer? Your team will be reverted.")){ F.undoTransfer(+a.dataset.undo); render(); } });
+  }
+  $("allowHits").onchange = render; $("horizon").onchange = render;
+  render();
+  F.footer();
+})();
+</script>
+</body>
+</html>

@@ -12,6 +12,7 @@
     fpOverrides: {},               // {id: avg fantasy points}
     budget: D.rules.budget,
     freeTransfers: D.rules.freeTransfers,
+    baseline: null,                // {round, date, points, rank, budget, free} — mid-season starting point set on My Team
     history: [],                   // [{round, points, rank, notes}]
     transfers: [],                 // [{round, out, in, date}]
     live: null,                    // {standings, constructors, results, fetchedAt, round}
@@ -230,6 +231,8 @@
     opts = opts || {};
     const budget = Math.max(S.budget, teamCost(team)), free = opts.free != null ? opts.free : S.freeTransfers, pen = D.rules.transferPenalty;
     const horizon = opts.horizon || 1; // races to look ahead
+    const maxMoves = opts.allowHits ? 2 : Math.min(2, opts.maxMoves != null ? opts.maxMoves : free);
+    if (maxMoves <= 0) return { base: 0, suggestions: [] };
     const races = remainingRaces().slice(0, horizon);
     const baseTeam = { drivers:[...team.drivers], constructors:[...team.constructors], boost:null };
     const score = t => races.reduce((a,r)=>{ t.boost = bestBoost(t,r); return a + teamProjection(t,r); },0);
@@ -252,14 +255,14 @@
       consider(t, [{type:"constructor", out:o, in:i.id}]);
     }
     // double driver swaps
-    const outs = team.drivers;
+    const outs = maxMoves >= 2 ? team.drivers : [];
     for (let a=0;a<outs.length;a++) for (let b=a+1;b<outs.length;b++)
       for (const i of allD) if (!team.drivers.includes(i.id)) for (const j of allD) if (j.id!==i.id && !team.drivers.includes(j.id) && i.id < j.id) {
         const t = { drivers: team.drivers.map(x=>x===outs[a]?i.id:(x===outs[b]?j.id:x)), constructors:[...team.constructors] };
         consider(t, [{type:"driver", out:outs[a], in:i.id},{type:"driver", out:outs[b], in:j.id}]);
       }
     // driver + constructor
-    for (const o of team.drivers) for (const i of allD) if (!team.drivers.includes(i.id))
+    if (maxMoves >= 2) for (const o of team.drivers) for (const i of allD) if (!team.drivers.includes(i.id))
       for (const oc of team.constructors) for (const ic of allT) if (!team.constructors.includes(ic.id)) {
         const t = { drivers: team.drivers.map(x=>x===o?i.id:x), constructors: team.constructors.map(x=>x===oc?ic.id:x) };
         consider(t, [{type:"driver", out:o, in:i.id},{type:"constructor", out:oc, in:ic.id}]);
@@ -357,6 +360,46 @@
     return { plan, scores };
   }
 
+  /* ---------- transfer accounting (2 free per round, +1 rollover, max 3; -10 per extra) ---------- */
+  function transfersUsed(round){ return S.transfers.filter(t => t.round === round).length; }
+  function unlimitedRound(round){ return S.chipsUsed.wildcard === round || S.chipsUsed.limitless === round; }
+  // free transfers available for a round, walking forward from the baseline
+  function freeTransfersFor(round){
+    const start = S.baseline ? S.baseline.round + 1 : (nextRace().round);
+    let avail = S.baseline && S.baseline.free != null ? S.baseline.free : S.freeTransfers;
+    if (round <= start) return Math.min(3, avail);
+    for (let r = start; r < round; r++) {
+      const used = unlimitedRound(r) ? 0 : transfersUsed(r);
+      const left = Math.max(0, avail - used);
+      avail = Math.min(3, D.rules.freeTransfers + (left > 0 ? D.rules.rollover : 0));
+    }
+    return avail;
+  }
+  function transferStatus(round){
+    const avail = freeTransfersFor(round), used = transfersUsed(round), unlimited = unlimitedRound(round);
+    const extra = unlimited ? 0 : Math.max(0, used - avail);
+    return { round, avail, used, remaining: unlimited ? Infinity : Math.max(0, avail - used), extra, penalty: extra * D.rules.transferPenalty, unlimited };
+  }
+  function logTransfer(round, move){
+    S.transfers.push({ round, type: move.type, out: move.out, in: move.in, date: new Date().toISOString() });
+    const T = S.team;
+    if (move.type === "driver") { T.drivers = T.drivers.map(x => x === move.out ? move.in : x); if (T.boost === move.out) T.boost = move.in; }
+    else T.constructors = T.constructors.map(x => x === move.out ? move.in : x);
+    save();
+  }
+  function undoTransfer(idx){
+    const t = S.transfers[idx]; if (!t) return;
+    const T = S.team;
+    if (t.type === "driver") { if (T.drivers.includes(t.in) && !T.drivers.includes(t.out)) { T.drivers = T.drivers.map(x => x === t.in ? t.out : x); if (T.boost === t.in) T.boost = t.out; } }
+    else if (T.constructors.includes(t.in) && !T.constructors.includes(t.out)) T.constructors = T.constructors.map(x => x === t.in ? t.out : x);
+    S.transfers.splice(idx, 1); save();
+  }
+  function totalPoints(){
+    const base = S.baseline ? S.baseline.points : 0;
+    const after = S.history.filter(h => !S.baseline || h.round > S.baseline.round).reduce((a,h)=>a+h.points,0);
+    return base + after;
+  }
+
   /* ---------- UI helpers ---------- */
   const esc = s => String(s==null?"":s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const money = n => "$" + (Math.round(n*10)/10).toFixed(1) + "M";
@@ -368,7 +411,7 @@
     return `<img class="driverimg ${cls||""}" style="--tc:${t.color}" data-wiki="${esc(d.wiki)}" data-px="${cls==='big'?500:250}" alt="${esc(d.first+' '+d.last)}" src="data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><rect width='120' height='120' fill='${t.color||'#444'}'/><text x='60' y='72' text-anchor='middle' font-family='Arial' font-weight='bold' font-size='34' fill='#fff'>${d.code}</text></svg>`)}">`;
   }
   function nav(active){
-    const links = [["index.html","Home"],["team.html","My Team"],["strategist.html","Strategist"],["calendar.html","Calendar & Chips"],["teams.html","Teams"],["drivers.html","Drivers"]];
+    const links = [["index.html","Home"],["team.html","My Team"],["transfers.html","Transfers"],["strategist.html","Strategist"],["calendar.html","Calendar & Chips"],["teams.html","Teams"],["drivers.html","Drivers"]];
     const el = document.createElement("div"); el.className="nav";
     el.innerHTML = `<div class="in"><a class="brand" href="index.html"><span class="stripe"></span>F1 Fantasy HQ</a>
       ${links.map(l=>`<a class="link ${l[0]===active?'active':''}" href="${l[0]}">${l[1]}</a>`).join("")}
@@ -390,5 +433,6 @@
 
   window.F1 = { D, S, save, teams, drivers, teamById, driverById, calendar, nextRace, remainingRaces, lastCompletedRound,
     refreshLive, wiki, hydrateWiki, carSVG, projDriver, projTeam, teamProjection, teamCost, bestBoost, suggestTransfers, bestTeam, chipPlan,
-    esc, money, fmtDate, toast, driverImg, initialsEl, nav, footer, chipName };
+    esc, money, fmtDate, toast, driverImg, initialsEl, nav, footer, chipName,
+    transfersUsed, freeTransfersFor, transferStatus, logTransfer, undoTransfer, totalPoints };
 })();

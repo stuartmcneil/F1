@@ -33,6 +33,20 @@
         </div>
       </div>
 
+      <div class="card" style="margin-top:16px;border-color:var(--red)">
+        <h2>Mid-season start</h2>
+        <p class="small muted">Already mid-season? Pick your current team above, then enter where you stand on fantasy.formula1.com and press <b>Apply</b>. The tracker then continues from that round: points, transfer allowances and the chip plan all count forward from here.</p>
+        <div class="row">
+          <label>After round <select id="bRound"></select></label>
+          <label>Total points <input type="number" id="bPts" placeholder="e.g. 2764"></label>
+          <label>Overall rank <input type="number" id="bRank" placeholder="optional"></label>
+          <label title="Team value + cash in the bank">Cost cap <input type="number" id="bBudget" step="0.1"></label>
+          <label title="Free transfers you have for the next race">Free transfers <input type="number" id="bFree" min="0" max="3" style="width:60px"></label>
+          <button id="bApply">Apply</button>
+        </div>
+        <div id="bStatus" class="small" style="margin-top:8px"></div>
+      </div>
+
       <div class="card" style="margin-top:16px">
         <h2>Chips used</h2>
         <p class="small muted">Tick the chips you've already played (and which round) so the planner only schedules the ones you still hold.</p>
@@ -123,12 +137,35 @@
 
     // history
     $("hTable").innerHTML = S.history.length ? `<tr><th>Round</th><th class="num">Points</th><th class="num">Rank</th><th></th></tr>` + S.history.map((h,i)=>`<tr><td>R${h.round}</td><td class="num">${h.points}</td><td class="num">${h.rank||"—"}</td><td><button class="ghost small" data-hdel="${i}">✕</button></td></tr>`).join("") +
-      `<tr><td><b>Total</b></td><td class="num"><b>${S.history.reduce((a,h)=>a+h.points,0)}</b></td><td></td><td></td></tr>` : `<tr><td class="muted">No rounds logged yet.</td></tr>`;
+      (S.baseline?`<tr><td class="muted">Baseline (to R${S.baseline.round})</td><td class="num muted">${S.baseline.points}</td><td class="num muted">${S.baseline.rank||"—"}</td><td></td></tr>`:"") + `<tr><td><b>Total</b></td><td class="num"><b>${F.totalPoints()}</b></td><td></td><td></td></tr>` : (S.baseline?`<tr><td class="muted">Baseline (to R${S.baseline.round})</td><td class="num">${S.baseline.points}</td><td class="num">${S.baseline.rank||"—"}</td><td></td></tr>`:`<tr><td class="muted">No rounds logged yet.</td></tr>`);
     document.querySelectorAll("[data-hdel]").forEach(b=>b.onclick=()=>{S.history.splice(+b.dataset.hdel,1); F.save(); render();});
   }
+  // mid-season baseline
+  const cal = F.calendar();
+  $("bRound").innerHTML = cal.map(r=>`<option value="${r.round}">R${r.round} ${r.short}</option>`).join("");
+  const B = S.baseline;
+  $("bRound").value = B ? B.round : F.lastCompletedRound();
+  $("bPts").value = B ? B.points : ""; $("bRank").value = B && B.rank ? B.rank : ""; $("bBudget").value = B ? B.budget : S.budget; $("bFree").value = B && B.free != null ? B.free : S.freeTransfers;
+  function bStatus(){
+    if (!S.baseline) { $("bStatus").innerHTML = `<span class="muted">No mid-season baseline set — tracking assumes you started at round 1.</span>`; return; }
+    const r = cal.find(x=>x.round===S.baseline.round);
+    $("bStatus").innerHTML = `<span class="pos">✓ Tracking from after R${S.baseline.round} ${r?r.flag+" "+F.esc(r.short):""} (applied ${new Date(S.baseline.date).toLocaleDateString("en-GB")}): ${S.baseline.points} pts${S.baseline.rank?`, rank ${S.baseline.rank.toLocaleString()}`:""}, cap ${F.money(S.baseline.budget)}, ${S.baseline.free} free transfer${S.baseline.free===1?"":"s"} for R${S.baseline.round+1}. Total now: <b>${F.totalPoints()}</b> pts.</span> <button class="ghost small" id="bClear">Remove baseline</button>`;
+    $("bClear").onclick = () => { if(confirm("Remove the mid-season baseline?")){ S.baseline=null; F.save(); bStatus(); } };
+  }
+  $("bApply").onclick = () => {
+    if (T.drivers.length<5 || T.constructors.length<2) return F.toast("Pick your full team (5 drivers + 2 constructors) first");
+    const pts = +$("bPts").value; if (isNaN(pts) || $("bPts").value==="") return F.toast("Enter your total points");
+    S.baseline = { round:+$("bRound").value, date:new Date().toISOString(), points:pts, rank:+$("bRank").value||null, budget:+$("bBudget").value||S.budget, free:Math.max(0,Math.min(3,+$("bFree").value)) };
+    S.budget = S.baseline.budget; S.freeTransfers = S.baseline.free;
+    S.history = S.history.filter(h=>h.round>S.baseline.round);
+    S.transfers = S.transfers.filter(t=>t.round>S.baseline.round);
+    F.save(); $("budget").value=S.budget; $("freeT").value=S.freeTransfers; bStatus(); render(); F.toast(`Baseline applied — continuing from round ${S.baseline.round+1}`);
+  };
+  bStatus();
+
   $("search").oninput = render;
   $("hAdd").onclick = () => { const r=+$("hRound").value, p=+$("hPts").value; if(!r) return F.toast("Enter a round number"); S.history=S.history.filter(h=>h.round!==r); S.history.push({round:r,points:p,rank:+$("hRank").value||null}); S.history.sort((a,b)=>a.round-b.round); F.save(); render(); };
-  $("hRound").value = F.lastCompletedRound();
+  $("hRound").value = Math.max(F.lastCompletedRound(), S.baseline?S.baseline.round+1:0);
   $("clearBtn").onclick = () => { if(confirm("Clear your saved team?")){ T.drivers=[]; T.constructors=[]; T.boost=null; F.save(); render(); } };
   $("exportBtn").onclick = () => { const a=document.createElement("a"); a.href="data:application/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(S,null,2)); a.download="f1-fantasy-backup.json"; a.click(); };
   $("importFile").onchange = e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const j=JSON.parse(r.result); Object.assign(S,j); F.save(); location.reload(); }catch(err){ F.toast("Not a valid backup file"); } }; r.readAsText(f); };
