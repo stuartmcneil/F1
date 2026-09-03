@@ -416,7 +416,7 @@
     el.innerHTML = `<div class="in"><a class="brand" href="index.html"><span class="stripe"></span>F1 Fantasy HQ</a>
       ${links.map(l=>`<a class="link ${l[0]===active?'active':''}" href="${l[0]}">${l[1]}</a>`).join("")}
       <button class="ghost small" id="refreshBtn" title="Pull latest standings & results from the Jolpica API">↻ Refresh</button>
-      <a class="btn small" href="https://github.com/stuartmcneil/window" target="_blank" rel="noopener" title="github.com/stuartmcneil/window" style="margin-left:6px">Stuart McNeil</a></div>`;
+      <a class="btn small" href="https://stuartmcneil.github.io/window/" target="_blank" rel="noopener" title="stuartmcneil.github.io/window" style="margin-left:6px">Stuart McNeil</a></div>`;
     document.body.prepend(el);
     el.querySelector("#refreshBtn").onclick = async (e) => {
       e.target.disabled = true; e.target.textContent = "Refreshing…";
