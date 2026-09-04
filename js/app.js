@@ -12,6 +12,7 @@
     fpOverrides: {},               // {id: avg fantasy points}
     budget: D.rules.budget,
     freeTransfers: D.rules.freeTransfers,
+    raceAdj: {},                   // {round: {driverOrTeamId: +/- pts}} — manual practice/weather adjustments
     baseline: null,                // {round, date, points, rank, budget, free} — mid-season starting point set on My Team
     history: [],                   // [{round, points, rank, notes}]
     transfers: [],                 // [{round, out, in, date}]
@@ -201,11 +202,15 @@
     if (d.country && race.country && d.country.indexOf(race.country) >= 0) p += 1; // home race bump
     if (d.id === "antonelli" && race.round === 13) p += 8;    // Monza grid penalty -> overtake points
     if (d.reserve) p = Math.min(p, 8);
+    const adj = S.raceAdj && S.raceAdj[race.round] && S.raceAdj[race.round][d.id];
+    if (adj) p += adj;
     return p;
   }
   function projTeam(t, race){
     let p = t.avgFp || 5;
     if (race && race.sprint) p *= 1.2;
+    const adj = race && S.raceAdj && S.raceAdj[race.round] && S.raceAdj[race.round][t.id];
+    if (adj) p += adj;
     return p;
   }
   function teamProjection(team, race){
