@@ -1,0 +1,40 @@
+{
+  "team": {
+    "drivers": [
+      "antonelli",
+      "bearman",
+      "hulkenberg",
+      "alonso",
+      "lindblad"
+    ],
+    "constructors": [
+      "ferrari",
+      "mercedes"
+    ],
+    "boost": "antonelli",
+    "name": "Stux Racing"
+  },
+  "chipsUsed": {
+    "nonegative": 15,
+    "3x": 16
+  },
+  "chipPlan": {},
+  "priceOverrides": {},
+  "fpOverrides": {},
+  "budget": 120.9,
+  "freeTransfers": 3,
+  "baseline": {
+    "round": 17,
+    "date": "2026-10-22T00:00:00Z",
+    "points": 0,
+    "rank": null,
+    "budget": 120.9,
+    "free": 3
+  },
+  "history": [],
+  "transfers": [],
+  "raceAdj": {},
+  "settings": {
+    "useWiki": true
+  }
+}
