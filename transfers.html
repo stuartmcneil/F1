@@ -140,8 +140,9 @@
     document.querySelectorAll("[data-undo]").forEach(a=>a.onclick=e=>{ e.preventDefault(); if(confirm("Undo this transfer? Your team will be reverted.")){ F.undoTransfer(+a.dataset.undo); render(); } });
   }
   // ---- practice adjustments (per round, +/- pts) ----
-  const PRESETS = { 13: { hamilton:8, leclerc:4, russell:2, lawson:3, ferrari:6, mclaren:-6, mercedes:2, rb:-2, stroll:-1, alonso:-1,
-    _note:"Monza FP1, Fri 4 Sep: Ferrari 1-2 (Leclerc, Hamilton) on the upgraded PU; Russell P3; Lawson P4 standing in at Red Bull; Antonelli P5 (back-of-grid penalty already modelled); Norris P6, Piastri outside the top 10 with McLaren's new H-wing; Aston Martin outside the top 10." } };
+  const PRESETS = {
+    19: { antonelli:3, leclerc:3, verstappen:2, hamilton:1, russell:-3, hadjar:1, perez:1, bearman:-2, alonso:-2, lindblad:-1, hulkenberg:0, mercedes:1, ferrari:3, red_bull:1, mclaren:0, cadillac:-1,
+      _note:"Mexico pre-weekend (29 Oct): Antonelli won Austin from pole (9th win); Leclerc P2 for the second race running with fastest lap; Verstappen P3, Hamilton P4. Russell P8 after a 5s penalty and 'lacked pace'. Hülkenberg P11, Lindblad P12, Alonso P16, Bearman DNF. Forecast dry all weekend (3% race-day rain) but windy Sunday; thin air at 2,200m makes cooling/reliability the risk. Pérez's 300th GP at home. Antonelli clinches the title with a top-9 finish." } };
   function renderAdj(){
     const A = (S.raceAdj[R] = S.raceAdj[R] || {});
     $("adjRound").textContent = `R${R} ${nr.short}`;

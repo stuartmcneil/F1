@@ -16,20 +16,21 @@
   },
   "chipsUsed": {
     "nonegative": 15,
-    "3x": 16
+    "3x": 16,
+    "limitless": 18
   },
   "chipPlan": {},
   "priceOverrides": {},
   "fpOverrides": {},
-  "budget": 120.9,
-  "freeTransfers": 3,
+  "budget": 120.5,
+  "freeTransfers": 2,
   "baseline": {
-    "round": 17,
-    "date": "2026-10-22T00:00:00Z",
+    "round": 18,
+    "date": "2026-10-29T00:00:00Z",
     "points": 0,
     "rank": null,
-    "budget": 120.9,
-    "free": 3
+    "budget": 120.5,
+    "free": 2
   },
   "history": [],
   "transfers": [],
