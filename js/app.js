@@ -308,7 +308,9 @@
   function chipPlan(){
     const rem = remainingRaces();
     const unused = D.chips.filter(c => !S.chipsUsed[c.id]);
-    const last = rem[rem.length-1];
+    // Rounds flagged atRisk in the calendar (e.g. Qatar/Abu Dhabi 2026 pending security confirmation) are not safe homes for a chip
+    const safe = rem.filter(r => !r.atRisk);
+    const last = safe[safe.length-1] || rem[rem.length-1];
     const scores = {};
     for (const c of unused) {
       scores[c.id] = rem.map(r => {
@@ -326,7 +328,7 @@
             if (r.round === 21) { s += 2; why.push("Vegas: top-speed cars dominate, plenty of overtakes"); }
             break;
           case "wildcard":
-            s = 4; if (r.round === 15) { s += 4; why.push("last chance to restructure before the flyaway run"); }
+            s = 4; if (r.round === 19) { s += 2; why.push("three transfers' worth of change before the final flyaways"); } if (r.round === 15) { s += 4; why.push("last chance to restructure before the flyaway run"); }
             if (r.newCircuit) { s += 2; why.push("new circuit: reshape after seeing practice"); }
             if (r.round === 13) { s += 1; why.push("react to the summer-form shift towards McLaren/Ferrari"); }
             break;
@@ -348,6 +350,7 @@
             if (r === last) { s += 2; why.push("use it or lose it"); }
             break;
         }
+        if (r.atRisk) { s -= 4; why.push("round not yet confirmed — avoid"); }
         return { round: r.round, score: s, why };
       });
     }
