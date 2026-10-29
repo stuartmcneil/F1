@@ -417,6 +417,19 @@
     return base + after;
   }
 
+  // Wildcard / Limitless plan: the full rebuild for a race, expressed as moves from the current team
+  function rebuildPlan(race, unlimitedBudget){
+    const T = S.team; if (!T.drivers.length) return null;
+    const cap = unlimitedBudget ? 999 : Math.max(S.budget, teamCost(T));
+    const best = bestTeam(cap, race);
+    if (!best) return null;
+    const outD = T.drivers.filter(x=>!best.drivers.includes(x)), inD = best.drivers.filter(x=>!T.drivers.includes(x));
+    const outC = T.constructors.filter(x=>!best.constructors.includes(x)), inC = best.constructors.filter(x=>!T.constructors.includes(x));
+    const moves = outD.map((o,i)=>({type:"driver", out:o, in:inD[i]})).concat(outC.map((o,i)=>({type:"constructor", out:o, in:inC[i]})));
+    const cur = teamProjection(Object.assign({},T,{boost:bestBoost(T,race)}), race);
+    return { best, moves, gain: best.proj - cur, cost: best.cost, cap, boost: best.drivers.map(driverById).sort((a,b)=>projDriver(b,race)-projDriver(a,race))[0] };
+  }
+
   /* ---------- UI helpers ---------- */
   const esc = s => String(s==null?"":s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const money = n => "$" + (Math.round(n*10)/10).toFixed(1) + "M";
@@ -451,6 +464,6 @@
 
   window.F1 = { D, S, save, teams, drivers, teamById, driverById, calendar, nextRace, remainingRaces, lastCompletedRound,
     refreshLive, wiki, hydrateWiki, carSVG, projDriver, projTeam, teamProjection, teamCost, bestBoost, suggestTransfers, bestTeam, chipPlan,
-    esc, money, fmtDate, toast, driverImg, initialsEl, nav, footer, chipName,
+    esc, money, fmtDate, toast, driverImg, initialsEl, nav, footer, chipName, rebuildPlan,
     transfersUsed, freeTransfersFor, transferStatus, logTransfer, undoTransfer, totalPoints };
 })();
