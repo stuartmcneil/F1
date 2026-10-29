@@ -24,6 +24,15 @@
   try { S = Object.assign(defaults(), JSON.parse(localStorage.getItem(KEY) || "{}")); }
   catch(e){ S = defaults(); }
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+  // Apply data/team.js when it is newer than what this browser last applied
+  (function(){ const seed = window.F1SEED; if (!seed || !seed.version) return;
+    if (S.seedApplied && S.seedApplied >= seed.version) return;
+    if (seed.team) S.team = JSON.parse(JSON.stringify(seed.team));
+    if (seed.chipsUsed) S.chipsUsed = Object.assign({}, seed.chipsUsed);
+    if (seed.budget) S.budget = seed.budget;
+    if (seed.freeTransfers != null) S.freeTransfers = seed.freeTransfers;
+    if (seed.baseline) { const keepPts = S.baseline && S.baseline.points ? S.baseline.points : 0; S.baseline = Object.assign({}, seed.baseline, { points: seed.baseline.points || keepPts }); }
+    S.seedApplied = seed.version; save(); })();
 
   /* ---------- merged data accessors ---------- */
   function teams(){
