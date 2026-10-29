@@ -1,14 +1,14 @@
 /* Stux's current team, maintained by Claude. Loaded by app.js: whenever `version` is newer than the one last applied in this browser,
    the team, chips, budget, free transfers and baseline below replace what's stored. Points log, transfers and price overrides are kept. */
 window.F1SEED = {
-  "version": "2026-10-29T18:00:00Z",
+  "version": "2026-10-30T09:00:00Z",
   "team": {
     "drivers": [
       "antonelli",
-      "bearman",
-      "hulkenberg",
+      "lawson",
       "alonso",
-      "lindblad"
+      "gasly",
+      "bortoleto"
     ],
     "constructors": [
       "ferrari",
@@ -20,16 +20,17 @@ window.F1SEED = {
   "chipsUsed": {
     "nonegative": 15,
     "3x": 16,
-    "limitless": 18
+    "limitless": 18,
+    "wildcard": 19
   },
-  "budget": 120.5,
+  "budget": 122.5,
   "freeTransfers": 2,
   "baseline": {
     "round": 18,
-    "date": "2026-10-29T00:00:00Z",
+    "date": "2026-10-30T09:00:00Z",
     "points": 0,
     "rank": null,
-    "budget": 120.5,
+    "budget": 122.5,
     "free": 2
   }
 };
