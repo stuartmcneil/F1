@@ -24,7 +24,7 @@
       <h2>2x Boost pick</h2>
       <div id="boost"></div>
       <h2 style="margin-top:18px">Chip this weekend?</h2>
-      <div id="chipNow"></div>
+      <div id="chipNow"></div><div id="rebuild"></div>
     </div>
   </div>
 
@@ -85,6 +85,26 @@
       (T.boost && ranked[0].d.id!==T.boost ? `<div class="reco warn small">You currently boost ${dn(T.boost)}; the model prefers ${ranked[0].d.first} ${ranked[0].d.last} this weekend.</div>` : `<div class="reco small">Boost choice looks right.</div>`);
   } else $("boost").innerHTML = `<p class="muted">Save a team first.</p>`;
 
+
+  // Wildcard / Limitless detail for the next race, if planned there
+  function renderRebuild(el){
+    const nr = F.nextRace(); const cp = F.chipPlan();
+    const chip = ["wildcard","limitless"].find(id => !S.chipsUsed[id] && cp.plan[id] && cp.plan[id].round === nr.round);
+    if (!chip) { el.innerHTML = ""; return; }
+    const plan = F.rebuildPlan(nr, chip === "limitless");
+    if (!plan) { el.innerHTML = `<div class="reco warn small">${F.chipName(chip)} is pencilled in for ${nr.flag} ${F.esc(nr.short)} — save a team to see the suggested rebuild.</div>`; return; }
+    const dn = id => { const d=F.driverById(id); return d ? d.first+" "+d.last : id; }, cn = id => { const c=F.teamById(id); return c ? c.name : id; };
+    const nm = m => m.type==="driver" ? `${dn(m.out)} → <b>${dn(m.in)}</b>` : `${cn(m.out)} → <b>${cn(m.in)}</b>`;
+    el.innerHTML = `<div class="card flat" style="margin-top:12px;border-color:var(--amber)">
+      <h3 style="margin:0 0 6px">If you play ${F.chipName(chip)} at ${nr.flag} ${F.esc(nr.name)}</h3>
+      <div class="small muted">${chip==="limitless"?"No cost cap for one weekend; team reverts afterwards.":"Unlimited transfers, cap still applies, changes are permanent."} Best projected line-up under ${chip==="limitless"?"no cap":F.money(plan.cap)}:</div>
+      <div class="row" style="gap:6px;margin:8px 0">${plan.best.drivers.map(id=>{const d=F.driverById(id),t=F.teamById(d.team);return `<span class="pill" style="border-color:${t.color}">${d.code}${plan.boost&&plan.boost.id===id?' <span class="boost">2x</span>':''}</span>`;}).join("")}${plan.best.constructors.map(id=>{const c=F.teamById(id);return `<span class="pill" style="background:${c.color}22;border-color:${c.color}">${F.esc(c.name)}</span>`;}).join("")}</div>
+      ${plan.moves.length ? `<div class="small"><b>${plan.moves.length} change${plan.moves.length>1?"s":""} from your current team:</b></div><ul class="small" style="margin:4px 0 8px 18px;padding:0">${plan.moves.map(m=>`<li>${nm(m)}</li>`).join("")}</ul>` : `<div class="small">Your current team is already the model's best — no reason to burn the chip here.</div>`}
+      <div class="small muted">Cost ${F.money(plan.cost)} · projected ${Math.round(plan.best.proj)} pts vs ${Math.round(plan.best.proj-plan.gain)} for the current team (<span class="${plan.gain>0?'pos':'neg'}">${plan.gain>=0?"+":""}${plan.gain.toFixed(0)}</span>) · boost ${plan.boost?F.esc(plan.boost.first+" "+plan.boost.last):"—"}.
+      ${plan.gain < 10 ? " The gain is small — a Wildcard is worth more on a weekend when your team genuinely needs rebuilding." : ""}</div>
+    </div>`;
+  }
+  renderRebuild($("rebuild"));
   // chip now
   const cp = F.chipPlan();
   const now = Object.entries(cp.plan).filter(([id,p])=>p.round===nr.round);
